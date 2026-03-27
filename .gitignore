@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Large media files (generated outputs and stock assets)
+*.mp3
+*.mp4
+*.zip
+
+# Stock video assets (large binary files)
+stock_videos/
+
+# Weekly output folders (e.g. 032726/)
+[0-9][0-9][0-9][0-9][0-9][0-9]/
+
+# Scratch folders
+up/
+old/
+
+# Environment / secrets
+.env
