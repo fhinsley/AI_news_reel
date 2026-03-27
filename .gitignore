@@ -23,3 +23,6 @@ old/
 
 # Environment / secrets
 .env
+
+# Claude Code local config
+.claude/
