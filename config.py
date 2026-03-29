@@ -73,5 +73,4 @@ OUTPUT_VIDEO = f"{WEEK}/News.mp4"
 AUDIO_SPEED_FACTOR = 0.9
 EL_FIXED_FILE = f"{WEEK}/News_fixed.mp3"
 EL_SLOW_FILE = f"{WEEK}/News_slow.mp3"
-ARTIFACT_FILTER = ""  # fill in each week with artifact silence ranges
 

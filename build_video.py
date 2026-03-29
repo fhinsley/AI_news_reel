@@ -1,4 +1,5 @@
 from moviepy import AudioFileClip, concatenate_videoclips, CompositeVideoClip, TextClip, VideoFileClip,vfx
+from silence_artifacts import find_artifact_regions, build_ffmpeg_filter
 
 import config
 import json
@@ -43,9 +44,14 @@ def make_text_clip(text, font_size, color, duration, position):
 # --- Build video ---
 
 # Step 1 - Silence artifacts
+
+regions = find_artifact_regions(config.TIMESTAMP_FILE, speed_factor = 1.0)
+artifact_filter = build_ffmpeg_filter(regions)
+print(f"Silencing {len(regions)} artifact regions")
+
 subprocess.run([
     "ffmpeg", "-i", config.EL_OUTPUT_FILE,
-   # "-af", config.ARTIFACT_FILTER,
+    "-af", artifact_filter,
     "-c:a", "libmp3lame",
     "-y", config.EL_FIXED_FILE
 ], check=True)
@@ -58,16 +64,15 @@ subprocess.run([
 ], check=True)
 
 # Step 3 - Add delay
-#subprocess.run([
-#    "ffmpeg", "-i", config.EL_SLOW_FILE,
-#    "-af", "adelay=2000|2000",
-#    "-y", config.EL_DELAY_FILE
-#], check=True)
+subprocess.run([
+    "ffmpeg", "-i", config.EL_SLOW_FILE,
+    "-af", "adelay=2000|2000",
+    "-y", config.EL_DELAY_FILE
+], check=True)
 
 audio = AudioFileClip(config.EL_DELAY_FILE)
 timestamps = load_timestamps(config.TIMESTAMP_FILE)
 overlays = parse_script(config.EL_INPUT_FILE)
-
 total_duration = audio.duration
 
 
