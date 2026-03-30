@@ -26,3 +26,6 @@ old/
 
 # Claude Code local config
 .claude/
+
+# VS Code workspace settings
+.vscode/

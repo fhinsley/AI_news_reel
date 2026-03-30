@@ -5,6 +5,14 @@ _today = datetime.now()
 OPENING_TITLE = f"AI Newsreel | Week of {_today.strftime('%B %d, %Y')}"
 WEEK = "032726"
 
+RUNDOWN_STYLE = {"font_size": 36, "color": "white"}
+RUNDOWN_HEADER = "This Week"
+RUNDOWN_HEADER_STYLE = {"font_size": 48, "color": "white"}
+RUNDOWN_Y_START = 200  # vertical position of header
+RUNDOWN_LINE_HEIGHT = 50  # pixels between lines
+RUNDOWN_END_PHRASE = "Here is what happened"
+
+
 OVERLAY_ANTICIPATION = 0.4  # seconds before timestamp to show overlay
 
 # Overlay Page Settings

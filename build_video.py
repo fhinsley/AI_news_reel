@@ -41,6 +41,40 @@ def make_text_clip(text, font_size, color, duration, position):
         .with_duration(duration)
     )
 
+
+def build_background(video_files, clip_duration, total_duration):
+    segments = []
+    current_time = 0
+    i = 0
+    while current_time < total_duration:
+        clip = VideoFileClip(video_files[i % len(video_files)])
+        # Loop clip to fill clip_duration seconds
+        segment = clip.with_effects([vfx.Loop(duration=clip_duration)]).resized((1920, 1080))
+        segments.append(segment)
+        current_time += clip_duration
+        i += 1
+    background = concatenate_videoclips(segments).subclipped(0, total_duration)
+    return background
+
+def parse_rundown(filepath):
+    with open(filepath, "r") as f:
+        content = f.read()
+    
+    start = content.find("This week:")
+    if start == -1:
+        return []
+    
+    end = content.find("<break", start)
+    rundown_text = content[start:end].strip()
+    
+    # Remove the "This week:" prefix
+    rundown_text = rundown_text.replace("This week:", "").strip()
+    
+    # Split into sentences and clean up
+    sentences = [s.strip() for s in rundown_text.split(".") if s.strip()]
+    
+    return sentences
+
 # --- Build video ---
 
 # Step 1 - Silence artifacts
@@ -75,21 +109,6 @@ timestamps = load_timestamps(config.TIMESTAMP_FILE)
 overlays = parse_script(config.EL_INPUT_FILE)
 total_duration = audio.duration
 
-
-def build_background(video_files, clip_duration, total_duration):
-    segments = []
-    current_time = 0
-    i = 0
-    while current_time < total_duration:
-        clip = VideoFileClip(video_files[i % len(video_files)])
-        # Loop clip to fill clip_duration seconds
-        segment = clip.with_effects([vfx.Loop(duration=clip_duration)]).resized((1920, 1080))
-        segments.append(segment)
-        current_time += clip_duration
-        i += 1
-    background = concatenate_videoclips(segments).subclipped(0, total_duration)
-    return background
-
 background = build_background(config.BG_VIDEOS, config.BG_CLIP_DURATION, total_duration)
 
 clips = [background]
@@ -103,6 +122,49 @@ opening = make_text_clip(
     position=config.OPENING_STYLE["position"]
 )
 clips.append(opening)
+
+rundown_sentences = parse_rundown(config.EL_INPUT_FILE)
+
+for i, sentence in enumerate(rundown_sentences):
+    t = find_timestamp(sentence[:20], timestamps)
+    if t is None:
+        continue
+
+    t = (t / config.AUDIO_SPEED_FACTOR) + config.AUDIO_OFFSET - config.OVERLAY_ANTICIPATION
+
+    # Find end timestamp for rundown
+    rundown_end_text = "Here is what happened"
+    t_end = find_timestamp(rundown_end_text, timestamps)
+    if t_end is not None:
+        t_end = (t_end / config.AUDIO_SPEED_FACTOR) + config.AUDIO_OFFSET
+
+    # Each line stays for 30 seconds from when it appears
+
+    # Duration runs from when this line appears until "Here is what happened"
+    duration = t_end - t if t_end is not None else 20
+
+    # Header appears with first sentence
+    if i == 0:
+        header = make_text_clip(
+            config.RUNDOWN_HEADER,
+            config.RUNDOWN_HEADER_STYLE["font_size"],
+            config.RUNDOWN_HEADER_STYLE["color"],
+            duration,
+            ("center", config.RUNDOWN_Y_START)
+        ).with_start(t)
+        clips.append(header)
+
+    # Each sentence on its own line below header
+    y_pos = config.RUNDOWN_Y_START + config.RUNDOWN_LINE_HEIGHT + (i * config.RUNDOWN_LINE_HEIGHT)
+    line = make_text_clip(
+        sentence,
+        config.RUNDOWN_STYLE["font_size"],
+        config.RUNDOWN_STYLE["color"],
+        duration,
+        ("center", y_pos)
+    ).with_start(t)
+    clips.append(line)
+
 
 # Section and story overlays
 last_section_end = 0
