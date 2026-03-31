@@ -14,6 +14,9 @@ RUNDOWN_END_PHRASE = "Here is what happened"
 
 
 OVERLAY_ANTICIPATION = 0.4  # seconds before timestamp to show overlay
+OVERLAY_BG_COLOR = (0, 0, 0)
+OVERLAY_BG_OPACITY = 0.6
+OVERLAY_BG_PADDING = 20
 
 # Overlay Page Settings
 BACKGROUND_COLOR = (15, 20, 40)  # dark navy
@@ -43,20 +46,20 @@ SECTION_HEADERS = [
 ]
 
 BG_VIDEOS = [
-    "stock_videos/video1_7sec.mp4",
     "stock_videos/video2_40Sec.mp4",
+    "stock_videos/video1_7sec.mp4",
     "stock_videos/video3_10Sec.mp4",
     "stock_videos/video4_17Sec.mp4",
     "stock_videos/video5_8Sec.mp4",
+    "stock_videos/video11_14Sec.mp4",
     "stock_videos/video6_20Sec.mp4",
+    "stock_videos/video14_10Sec.mp4",
     "stock_videos/video7_10Sec.mp4",
     "stock_videos/video8_10Sec.mp4",
     "stock_videos/video9_10Sec.mp4",
     "stock_videos/video10_13Sec.mp4",
-    "stock_videos/video11_14Sec.mp4",
     "stock_videos/video12_9Sec.mp4",
     "stock_videos/video13_14Sec.mp4",
-    "stock_videos/video14_10Sec.mp4",
 ]
 
 BG_CLIP_DURATION = 30  # seconds to show each clip before moving to next
