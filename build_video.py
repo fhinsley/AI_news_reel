@@ -261,10 +261,14 @@ def get_change_points(find_timestamp, timestamps, overlays):
             continue
         t = (t / config.AUDIO_SPEED_FACTOR) + config.AUDIO_OFFSET
         change_points.append((t, text))
+    
+    t_outro = find_timestamp(config.OUTRO_PHRASE, timestamps)
+    if t_outro is not None:
+        t_outro = (t_outro / config.AUDIO_SPEED_FACTOR) + config.AUDIO_OFFSET
+        change_points.append((t_outro, "outro"))
+
     change_points.sort(key=lambda x: x[0])
     return change_points
-
-
 
 def wrap_sources(sources_text, max_line_length=40):
     items = [s.strip() for s in sources_text.split(",")]
