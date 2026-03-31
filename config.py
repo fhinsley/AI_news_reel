@@ -45,6 +45,17 @@ SECTION_HEADERS = [
     "World Impact",
 ]
 
+SECTION_VIDEOS = {
+    "intro": "stock_videos/intro.mp4",
+    "Core Tech Releases": "stock_videos/tech.mp4",
+    "Directions in AI Architecture": "stock_videos/architecture.mp4",
+    "AI For Productivity": "stock_videos/productivity.mp4",
+    "World Impact": "stock_videos/world.mp4",
+    "outro": "stock_videos/outro.mp4",
+}
+
+OUTRO_PHRASE = "That is your weekly summary"
+
 BG_VIDEOS = [
     "stock_videos/video2_40Sec.mp4",
     "stock_videos/video1_7sec.mp4",

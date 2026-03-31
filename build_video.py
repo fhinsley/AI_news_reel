@@ -54,24 +54,29 @@ def make_text_clip_with_bg(text, font_size, color, duration, position):
     
     return bg, txt
 
-def build_background_from_timestamps(video_files, change_points, total_duration):
+def build_background_from_timestamps(video_files, change_points, total_duration, section_map=None):
     segments = []
     video_index = 0
     
-    for i, start_time in enumerate(change_points):
-        # Duration runs to next change point or end of video
+    for i, (start_time, label) in enumerate(change_points):
         if i + 1 < len(change_points):
-            duration = change_points[i + 1] - start_time
+            duration = change_points[i + 1][0] - start_time
         else:
             duration = total_duration - start_time
         
-        clip = (VideoFileClip(video_files[video_index % len(video_files)])
+        # Use section-specific video if available
+        if section_map and label in section_map:
+            video_file = section_map[label]
+        else:
+            video_file = video_files[video_index % len(video_files)]
+            video_index += 1
+        
+        clip = (VideoFileClip(video_file)
                 .with_effects([vfx.Loop(duration=duration)])
                 .resized((1920, 1080))
                 .with_start(start_time))
         
         segments.append(clip)
-        video_index += 1
     
     return segments
 
@@ -246,16 +251,20 @@ def create_sources_clip(find_timestamp, make_text_clip, timestamps, clips, scrip
     clips.append(sources)
 
 # Build change points from section and story timestamps
+
+
 def get_change_points(find_timestamp, timestamps, overlays):
-    change_points = [0]
+    change_points = [(0, "intro")]
     for kind, text in overlays:
         t = find_timestamp(text, timestamps)
         if t is None:
             continue
         t = (t / config.AUDIO_SPEED_FACTOR) + config.AUDIO_OFFSET
-        change_points.append(t)
-    change_points.sort()
+        change_points.append((t, text))
+    change_points.sort(key=lambda x: x[0])
     return change_points
+
+
 
 def wrap_sources(sources_text, max_line_length=40):
     items = [s.strip() for s in sources_text.split(",")]
