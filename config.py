@@ -3,8 +3,10 @@ import os
 from datetime import datetime
 _today = datetime.now()
 OPENING_TITLE = f"AI Newsreel | Week of {_today.strftime('%B %d, %Y')}"
-WEEK = "032726"
+WEEK = "040126"
 
+
+#Weekly Rundown Settings
 RUNDOWN_STYLE = {"font_size": 36, "color": "white"}
 RUNDOWN_HEADER = "This Week"
 RUNDOWN_HEADER_STYLE = {"font_size": 48, "color": "white"}
@@ -46,34 +48,29 @@ SECTION_HEADERS = [
 ]
 
 SECTION_VIDEOS = {
-    "intro": "stock_videos/intro.mp4",
-    "Core Tech Releases": "stock_videos/tech.mp4",
-    "Directions in AI Architecture": "stock_videos/architecture.mp4",
+    "intro": "stock_videos/bookend.mp4",
+    "Core Tech Releases": "stock_videos/releases.mp4",
+    "Directions in AI Architecture": "stock_videos/directions.mp4",
     "AI For Productivity": "stock_videos/productivity.mp4",
-    "World Impact": "stock_videos/world.mp4",
-    "outro": "stock_videos/outro.mp4",
+    "World Impact": "stock_videos/world_impact.mp4",
+    "outro": "stock_videos/bookend.mp4",
 }
 
 OUTRO_PHRASE = "That is your weekly summary"
 
 BG_VIDEOS = [
-    "stock_videos/video2_40Sec.mp4",
-    "stock_videos/video1_7sec.mp4",
-    "stock_videos/video3_10Sec.mp4",
-    "stock_videos/video4_17Sec.mp4",
-    "stock_videos/video5_8Sec.mp4",
-    "stock_videos/video11_14Sec.mp4",
-    "stock_videos/video6_20Sec.mp4",
-    "stock_videos/video14_10Sec.mp4",
-    "stock_videos/video7_10Sec.mp4",
-    "stock_videos/video8_10Sec.mp4",
-    "stock_videos/video9_10Sec.mp4",
-    "stock_videos/video10_13Sec.mp4",
-    "stock_videos/video12_9Sec.mp4",
-    "stock_videos/video13_14Sec.mp4",
-]
 
-BG_CLIP_DURATION = 30  # seconds to show each clip before moving to next
+    "stock_videos/video6_20Sec.mp4",
+    "stock_videos/newvid1.mp4",
+    "stock_videos/newvid3.mp4",
+    "stock_videos/newvid4.mp4",
+    "stock_videos/video7_10Sec.mp4",
+    "stock_videos/newvid5.mp4",
+    "stock_videos/newvid6.mp4",
+    "stock_videos/video12_9Sec.mp4",
+    "stock_videos/newvid7.mp4",
+    "stock_videos/video8_10Sec.mp4",
+]
 
 # This model handles SSML properly.  
 EL_MODEL_ID = "eleven_multilingual_v2"

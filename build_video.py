@@ -307,7 +307,7 @@ total_duration = audio.duration
 
 change_points = get_change_points(find_timestamp, timestamps, overlays)
 
-background_clips = build_background_from_timestamps(config.BG_VIDEOS, change_points, total_duration)
+background_clips = build_background_from_timestamps(config.BG_VIDEOS, change_points, total_duration, section_map=config.SECTION_VIDEOS)
 
 # Opening title card
 opening = make_text_clip(

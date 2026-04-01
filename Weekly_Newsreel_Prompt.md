@@ -8,9 +8,12 @@ The script format rules are enforced by the Python pipeline — do not deviate f
 
 ## Weekly Prompt
 
-Generate this week's AI newsreel script for the week of [START DATE] through [END DATE].
+Generate this week's AI newsreel script for the week of [START_DATE] through [END_DATE].
 
 Search broadly for this week's top AI stories across reputable technology and AI news outlets.
+
+Summarize findings internally — do not include raw article text in your response.
+Write the script directly from your research.
 
 Follow these formatting rules exactly — the video production pipeline depends on them:
 
