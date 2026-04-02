@@ -1,0 +1,161 @@
+Welcome to the AI Newsreel. This is a weekly summary of the news in AI for the week of March 24 through March 30, 2026.
+
+<break time="1s" />
+
+This week: Microsoft deepened its open source AI model strategy. OpenAI closed its Sora video platform and pivoted toward enterprise systems. Nvidia’s CEO claimed AI has already achieved general intelligence. Google launched new data tools for developers. Salesforce and Meta both expanded their voice and model architectures. And researchers demonstrated advances in energy efficient AI training.
+
+<break time="1s" />
+
+Here is what happened.
+
+<break time="2s" />
+
+Core Tech Releases
+
+<break time="1s" />
+
+Microsoft unveils Harrier multilingual embedding models
+
+<break time="1s" />
+
+Microsoft released the Harrier OSS multilingual embedding suite, a family of decoder based transformer models ranging from two hundred seventy million to twenty seven billion parameters. The models set record scores on the multilingual text embedding benchmark version two. A Microsoft spokesperson said Harrier was designed for language robustness rather than English centric optimization, signaling an effort to strengthen Azure’s developer ecosystem in regions like Latin America, Southeast Asia, and Africa.
+
+<break time="1s" />
+
+Google launches Gemini Data Tools for structured input
+
+<break time="1s" />
+
+Google began limited rollout of Gemini Data Tools inside its Vertex AI platform, allowing developers to train custom agents directly on spreadsheet and tabular data. The company said the framework uses schema inference to let models read structured databases without manual labeling. Early testers reported faster analytics workflows than with conventional large language model fine tuning.
+
+<break time="1s" />
+
+Meta releases Code Llama Two with improved reasoning
+
+<break time="1s" />
+
+Meta open sourced Code Llama Two, an update to its programming focused large language model. The model supports reasoning trace output and multi file memory context up to two hundred fifty thousand tokens. Meta’s research team said it integrated feedback from developers who wanted more reliable planning and fewer hallucinations in open source coding systems.
+
+<break time="1s" />
+
+Salesforce debuts VoiceAgentRAG for faster speech response
+
+<break time="1s" />
+
+Salesforce introduced its VoiceAgentRAG framework, combining a memory router and parallel agent structure to achieve conversational responses within two hundred milliseconds. Tests on internal dialogue datasets showed up to three hundred times faster retrieval augmented generation compared with standard reference architectures. Engineers said the design could apply to call centers and assistive devices aiming for natural interaction cadence.
+
+<break time="2s" />
+
+Directions in AI Architecture
+
+<break time="1s" />
+
+OpenAI shutters Sora video generation and realigns focus
+
+<break time="1s" />
+
+OpenAI confirmed that it will discontinue its Sora video platform by mid year and reallocate resources toward coding copilots, enterprise agents, and multimodal science tools. Internal memo excerpts cited bandwidth limits and the difficulty of maintaining both consumer video and enterprise model development. The company said affected users will be offered credits toward ChatGPT Team and API products. Analysts viewed the decision as a shift toward profitability ahead of an expected initial public offering later this year.
+
+<break time="1s" />
+
+Nvidia CEO says AI has reached general intelligence
+
+<break time="1s" />
+
+Nvidia CEO Jensen Huang said during the GTC closing keynote that artificial general intelligence has in his view already been achieved. He pointed to multimodal autonomous systems capable of planning, perception, and code generation across domains. While other researchers disputed the remark, Huang said the future challenge is not capability but alignment, and called for new benchmarks measuring safe reasoning.
+
+<break time="1s" />
+
+xAI announces expansion of Grok Imagine video tool
+
+<break time="1s" />
+
+Elon Musk’s company xAI announced work on the next version of its video synthesis tool, Grok Imagine. The update will add temporal consistency modeling to improve frame to frame realism and physical continuity. Musk said the project’s goal is transparent generation, where users can trace how each frame was built from source prompts and fused data. The announcement followed OpenAI’s departure from consumer video, placing xAI among few firms continuing direct work in this segment.
+
+<break time="1s" />
+
+Researchers propose sparse training for low power models
+
+<break time="1s" />
+
+Teams at the University of Toronto and ETH Zurich published results showing that sparse gradient updates may cut transformer training energy use by up to forty percent with small accuracy tradeoffs. The method activates only relevant neuron clusters at each step and could make large model training more sustainable without hardware redesign. Industry observers said efficiency breakthroughs like this may redefine foundation model economics within two years.
+
+<break time="2s" />
+
+AI For Productivity
+
+<break time="1s" />
+
+Microsoft Researcher adds Claude integration for citation accuracy
+
+<break time="1s" />
+
+Microsoft updated its Researcher AI agent within the Microsoft 365 Copilot environment to incorporate both OpenAI’s GPT and Anthropic’s Claude models. The new collaborative mode allows GPT to draft summaries while Claude evaluates factual grounding, returning corrected passages with linked citations. Enterprise testers reported improved reliability in report generation and fewer unsupported claims in complex research briefs.
+
+<break time="1s" />
+
+Notion introduces custom model marketplace
+
+<break time="1s" />
+
+Workspace platform Notion opened a marketplace for third party AI models, allowing teams to license domain specific agents for project management, finance, and technical documentation. The marketplace uses an internal credit system and includes traceable usage analytics for compliance. Notion said it expects certified partners to release hundreds of optimized mini models during the next quarter.
+
+<break time="1s" />
+
+Vercel AI SDK refines live tool switching
+
+<break time="1s" />
+
+Vercel announced version seven beta of its AI software development kit for TypeScript, providing experimental tool filtering control. The update enables developers to switch between model endpoints within an ongoing chat session, a feature aimed at improving experimentation and memory handling. The company said it was part of a broader initiative to streamline real time deployment of interactive web based agents.
+
+<break time="1s" />
+
+Anthropic reportedly evaluating public listing path
+
+<break time="1s" />
+
+According to Bloomberg, Anthropic is exploring an initial public offering window before the end of the year. The company, known for its Claude model line, has experienced strong enterprise adoption and diversified revenue from partnerships with Amazon Web Services and Google Cloud. Market analysts said a listing could position Anthropic as one of the first major AI firms to go public after the 2023–2024 investment surge.
+
+<break time="2s" />
+
+World Impact
+
+<break time="1s" />
+
+Disney cancels one billion dollar content deal with OpenAI
+
+<break time="1s" />
+
+Disney confirmed that it ended a previously announced one billion dollar partnership with OpenAI following the shutdown of Sora. The collaboration would have allowed AI generated animation using Disney characters within a creative sandbox application. Company executives said the focus will return to in house content automation tools developed through its Industrial Light and Magic technology group.
+
+<break time="1s" />
+
+Sony and Panasonic form alliance on AI content watermarking
+
+<break time="1s" />
+
+Japan based Sony and Panasonic announced a joint initiative to standardize digital watermarks for AI generated images and video. The pair will work with the Content Authenticity Initiative to embed provenance tags readable by major editing platforms. The system aims to trace generation origins without degrading image quality, creating new transparency standards for synthetic media.
+
+<break time="1s" />
+
+UK sets standards for safe generative deployment
+
+<break time="1s" />
+
+The United Kingdom’s Department for Science, Innovation and Technology published draft guidelines outlining documentation and disclosure practices for generative AI systems used in government functions. The framework requires agencies to catalog dataset origins, known model biases, and human oversight procedures. Observers said it could influence wider adoption of standardized audit trails in both public and private deployments.
+
+<break time="1s" />
+
+AI lab partnership explores climate modeling at scale
+
+<break time="1s" />
+
+A consortium led by DeepMind, the European Space Agency, and several universities announced new results showing large transformer models outperform traditional climate projections in tracking atmospheric river formation. The group said such models could offer faster forecasts and better planning tools for flood and drought management, demonstrating that generative AI’s reach now extends well beyond language.
+
+<break time="2s" />
+
+That is your weekly summary of this week's AI news.
+
+<break time="1s" />
+
+Sources this week: Bloomberg, TechCrunch, MIT Technology Review, Reuters, Marktechpost, VentureBeat, Microsoft Research Blog, Meta AI, Google Cloud Blog, Salesforce AI Research, OpenAI, Nvidia GTC 2026, and UK Department for Science Innovation and Technology.

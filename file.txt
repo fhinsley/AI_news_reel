@@ -1,0 +1,42 @@
+Welcome to the AI Newsreel. This is a weekly summary of the news in AI for the week of March 25, 2026 to March 31, 2026
+
+<break time="1s" />
+
+This week: [rundown — one concise sentence per story, separated by periods.]
+
+<break time="1s" />
+
+Here is what happened.
+
+<break time="2s" />
+
+Core Tech Releases
+
+<break time="1s" />
+
+[Story Title Under 60 Characters]
+
+<break time="1s" />
+
+[Story paragraph]
+
+<break time="1s" />
+
+[Next story...]
+
+<break time="2s" />
+
+Directions in AI Architecture
+...
+AI For Productivity
+...
+World Impact
+...
+
+<break time="2s" />
+
+That is your weekly summary of this week's AI news.
+
+<break time="1s" />
+
+Sources this week: [comma-separated list of outlets].

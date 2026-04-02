@@ -1,4 +1,7 @@
-Generate this week's AI newsreel script for the week of [START DATE] through [END DATE].
+Generate this week's AI newsreel script for the week of [March 28, 2026] through [April 3, 2026].
+
+HARD LIMIT: Total script must not exceed 9,500 characters including break tags.
+Write 3 stories per section maximum. Stop before reaching the limit.
 
 <!-- BROAD SEARCH APPROACH — kept for reference
      Higher session usage, can trigger rate limits on paid plans.
@@ -61,7 +64,7 @@ STYLE:
 - Attribution for strong claims
 - Spell out numbers when spoken
 - Target 8,500 to 9,500 characters total
-
+`
 CONTENT FILTER — avoid:
 - Litigation or lawsuits between AI companies and government
 - Politically polarizing topics
