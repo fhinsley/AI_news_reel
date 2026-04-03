@@ -1,12 +1,21 @@
 import os
+from pathlib import Path
 
 from datetime import datetime, timedelta
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+
+
+def project_path(*parts):
+    return str(PROJECT_ROOT.joinpath(*parts))
 
 end_date = datetime.today()- timedelta(days=2)
 start_date = end_date - timedelta(days=7)
 
 OPENING_TITLE = f"AI Newsreel Week of {start_date.strftime('%b %d')} - {end_date.strftime('%b %d  %Y')}"
-WEEK_FOLDER = end_date.strftime("%m%d%y")
+WEEK_FOLDER_NAME = end_date.strftime("%m%d%y")
+WEEK_FOLDER = project_path(WEEK_FOLDER_NAME)
 WEEK_PHRASE = "This week:"
 
 #Weekly Rundown Settings
@@ -50,14 +59,14 @@ SECTION_HEADERS = [
 ]
 
 SECTION_VIDEOS = {
-    "intro": "stock_videos/bookend.mp4",
-    "Core Tech Releases": "stock_videos/windydesertriver.mp4",
-    "Directions in AI Architecture":"stock_videos/narrowmtnpath.mp4",
+    "intro": project_path("stock_videos", "bookend.mp4"),
+    "Core Tech Releases": project_path("stock_videos", "windydesertriver.mp4"),
+    "Directions in AI Architecture": project_path("stock_videos", "narrowmtnpath.mp4"),
 
-    "AI For Productivity": "stock_videos/cityroadbay.mp4",
-    "World Impact": "stock_videos/grandcanyonriver.mp4",
+    "AI For Productivity": project_path("stock_videos", "cityroadbay.mp4"),
+    "World Impact": project_path("stock_videos", "grandcanyonriver.mp4"),
 
-    "outro": "stock_videos/bookend.mp4",
+    "outro": project_path("stock_videos", "bookend.mp4"),
 }
 
 OUTRO_PHRASE = "That is your weekly summary"
@@ -65,15 +74,15 @@ OUTRO_PHRASE = "That is your weekly summary"
 SOURCE_PHRASE = "Sources this week:"
 
 BG_VIDEOS = [
-    "stock_videos/bluehardwarechip.mp4",
-    "stock_videos/yellowgreenwavy.mp4",
-    "stock_videos/world_impact.mp4",    
-    "stock_videos/grasssunset.mp4",
-    "stock_videos/productivity.mp4",
-    "stock_videos/diskdrives.mp4",
-    "stock_videos/releases.mp4",
-    "stock_videos/goldhardwarechip.mp4",
-    "stock_videos/directions.mp4",
+    project_path("stock_videos", "bluehardwarechip.mp4"),
+    project_path("stock_videos", "yellowgreenwavy.mp4"),
+    project_path("stock_videos", "world_impact.mp4"),
+    project_path("stock_videos", "grasssunset.mp4"),
+    project_path("stock_videos", "productivity.mp4"),
+    project_path("stock_videos", "diskdrives.mp4"),
+    project_path("stock_videos", "releases.mp4"),
+    project_path("stock_videos", "goldhardwarechip.mp4"),
+    project_path("stock_videos", "directions.mp4"),
 ]
 
 # This model handles SSML properly.  
@@ -87,12 +96,12 @@ AUDIO_OFFSET = 2  # seconds of video before audio starts
 AUDIO_CODEC = "aac"
 
 #Input/Output Files
-EL_INPUT_FILE = f"{WEEK_FOLDER}/News.txt"
-EL_OUTPUT_FILE = f"{WEEK_FOLDER}/News.mp3"
-EL_DELAY_FILE = f"{WEEK_FOLDER}/News_delayed.mp3"
-TIMESTAMP_FILE = f"{WEEK_FOLDER}/NewsTimeStamps.json"
-OUTPUT_VIDEO = f"{WEEK_FOLDER}/News.mp4"
+EL_INPUT_FILE = project_path(WEEK_FOLDER_NAME, "News.txt")
+EL_OUTPUT_FILE = project_path(WEEK_FOLDER_NAME, "News.mp3")
+EL_DELAY_FILE = project_path(WEEK_FOLDER_NAME, "News_delayed.mp3")
+TIMESTAMP_FILE = project_path(WEEK_FOLDER_NAME, "NewsTimeStamps.json")
+OUTPUT_VIDEO = project_path(WEEK_FOLDER_NAME, "News.mp4")
 
 AUDIO_SPEED_FACTOR = 0.9
-EL_FIXED_FILE = f"{WEEK_FOLDER}/News_fixed.mp3"
-EL_SLOW_FILE = f"{WEEK_FOLDER}/News_slow.mp3"
+EL_FIXED_FILE = project_path(WEEK_FOLDER_NAME, "News_fixed.mp3")
+EL_SLOW_FILE = project_path(WEEK_FOLDER_NAME, "News_slow.mp3")
