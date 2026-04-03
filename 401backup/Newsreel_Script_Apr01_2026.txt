@@ -1,0 +1,121 @@
+Welcome to the AI Newsreel. This is a weekly summary of the news in AI for the week of March 26 through April 1, 2026.
+
+<break time="1s" />
+
+This week: OpenAI shut down Sora, its AI video generation tool, citing unsustainable economics. Meta released Llama 4, its first natively multimodal open source model. Google expanded its Gemini lineup with new audio and music generation tools. A data leak revealed a new Anthropic model codenamed Mythos. And OpenAI announced a new model internally described as capable of meaningfully accelerating the economy.
+
+<break time="1s" />
+
+Here is what happened.
+
+<break time="2s" />
+
+Core Tech Releases
+
+<break time="1s" />
+
+Meta Llama 4 Scout and Maverick
+
+<break time="1s" />
+
+Meta released two new open source models this week, Llama 4 Scout and Llama 4 Maverick. Both are natively multimodal, handling text, images, and video without separate processing pipelines. Scout offers a 10 million token context window, one of the largest available in any model. Maverick uses a mixture of experts architecture, activating only a portion of its parameters per token for efficiency. The models were trained on over 30 trillion tokens, more than double the Llama 3 training set. Meta also announced a Llama API in limited preview, giving developers a managed platform for building on Llama without self-hosting.
+
+<break time="1s" />
+
+Google Gemini 3.1 Flash Live and Lyria 3 Pro
+
+<break time="1s" />
+
+Google released Gemini 3 point 1 Flash Live this week, described as its highest quality audio and voice model. The release targets real time conversation with lower latency and longer context retention. Google also released Lyria 3 Pro for music generation, extending track length to three minutes with more granular control over vocal style, tempo, and acoustics. The model is available in the Gemini app for paid subscribers and via the API in Google AI Studio. All generated tracks include SynthID watermarking to identify AI-created audio.
+
+<break time="1s" />
+
+OpenAI Spud Model in Pretraining
+
+<break time="1s" />
+
+On the same day OpenAI announced the Sora shutdown, CEO Sam Altman told employees that pretraining had completed on a new model internally codenamed Spud. Altman described it as capable of meaningfully accelerating the economy and said the company believes it will be released within a few weeks. No benchmark details or official announcement have been published.
+
+<break time="2s" />
+
+Directions in AI Architecture
+
+<break time="1s" />
+
+Claude Mythos Data Leak
+
+<break time="1s" />
+
+A data leak on March 26th exposed nearly 3,000 internal Anthropic files that had been left on a publicly accessible server without authentication. Among the documents was a draft blog post describing a new model called Claude Mythos, internally codenamed Capybara. The documents described it as by far the most powerful model Anthropic has developed, positioned above the current Opus tier. Anthropic confirmed training is complete and that the model is in early access with cybersecurity partners. No public release date has been announced.
+
+<break time="1s" />
+
+Meta TRIBE v2 Brain Response Model
+
+<break time="1s" />
+
+Meta released TRIBE v2 this week, a foundation model trained to predict how the human brain responds to visual and audio stimuli. The model draws on 500 hours of fMRI recordings from over 700 people, enabling zero shot predictions for new subjects and new languages. Meta is releasing the model weights, codebase, and research paper publicly. The stated applications include neuroscience research, improving AI architectures by incorporating insights from human cognition, and accelerating diagnosis of neurological diseases.
+
+<break time="1s" />
+
+On-Device AI Partnership
+
+<break time="1s" />
+
+Nota AI and SiMa.ai announced a strategic partnership this week focused on developing AI that runs on physical hardware rather than cloud servers. The collaboration targets industrial equipment, vehicles, and consumer devices. On-device AI reduces latency and eliminates dependence on network connectivity, which is increasingly important for applications where real-time response is required and cloud access cannot be guaranteed.
+
+<break time="2s" />
+
+AI For Productivity
+
+<break time="1s" />
+
+Shopify Agentic Storefronts
+
+<break time="1s" />
+
+Shopify merchants can now sell directly inside ChatGPT, Google AI Mode, Microsoft Copilot, and the Gemini app through what the company calls Agentic Storefronts. Pricing, checkout, and inventory stay synchronized from the Shopify admin. Merchants do not pay additional fees beyond standard processing rates. Brands that do not use Shopify for their main storefront can join through a new Agentic plan and list products across the same AI channels.
+
+<break time="1s" />
+
+Claude Computer Use on Mobile
+
+<break time="1s" />
+
+Anthropic announced that Claude's computer use capability is now available on mobile. When no direct integration exists for a task, Claude can point, click, scroll, and navigate a desktop screen to complete it, including opening files and browsing. The feature asks for user permission before taking each action. A companion feature called Dispatch lets users assign tasks from their phone while Claude handles them on their desktop.
+
+<break time="1s" />
+
+Google Gemini Memory Transfer
+
+<break time="1s" />
+
+Google released a memory transfer feature in Gemini this week, allowing users to import conversation history and context from other AI services. The update mirrors a similar feature Anthropic released for Claude earlier this month. Both features reduce the switching cost for users who have built up context and preferences in one AI platform and want to move to another.
+
+<break time="2s" />
+
+World Impact
+
+<break time="1s" />
+
+OpenAI Shuts Down Sora
+
+<break time="1s" />
+
+OpenAI announced the shutdown of Sora, its AI video generation tool, on March 24th. The web and app experience will go dark on April 26th. The API will continue until September 24th, after which user data will be permanently deleted. According to reporting from multiple outlets, Sora was costing an estimated 15 million dollars per day in compute while generating 2 point 1 million dollars in total lifetime revenue. Downloads peaked at 3 point 3 million in November 2025 and fell 66 percent by February 2026. The Disney partnership, which had been valued at 1 billion dollars, collapsed alongside the shutdown announcement. OpenAI says the Sora team will continue as a research unit focused on world simulation for robotics.
+
+<break time="1s" />
+
+AI Public Opinion
+
+<break time="1s" />
+
+A Quinnipiac poll released this week found that more than half of U.S. adults believe AI is likely to cause harm. The survey reflects a growing tension between recognition of AI's potential benefits and concern about job displacement, privacy, and misuse. The finding comes as AI investment and deployment continue to accelerate across industries.
+
+<break time="2s" />
+
+That is your weekly summary of this week's AI news.
+
+<break time="1s" />
+
+Sources this week: TechCrunch, Meta AI Blog, Google DeepMind, OpenAI, The Decoder, Quinnipiac, Reuters, Labla.

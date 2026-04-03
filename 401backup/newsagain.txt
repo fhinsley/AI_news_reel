@@ -1,0 +1,69 @@
+Welcome to the AI Newsreel. This is a weekly summary of the news in AI for the week of March 30 – April 5, 2026.  
+
+<break time="1s" />
+
+This week: AI frameworks mature for large-scale deployment, as leading platforms release major versions focused on reliability, observability, and agentic integration.  
+
+<break time="1s" />
+
+Here is what happened.  
+
+<break time="2s" />
+
+Core Tech Releases  
+
+<break time="1s" />
+
+TRL v1.0 Redefines Post‑Training Frameworks  
+
+<break time="1s" />
+
+Hugging Face released TRL v1.0, marking its transformation from an experimental research kit to a production‑ready library. The update introduces over 75 post‑training methods, plus new algorithms like Asynchronous GRPO, VESPO, and Self‑Distillation Policy Optimization (SDPO)—all designed to streamline reinforcement learning for large language models and improve GPU utilization. huggingface.co github.com  
+
+<break time="1s" />
+
+Pydantic‑AI v1.75 Improves Reliability Across Agent Runs  
+
+<break time="1s" />
+
+The latest pydantic‑ai v1.75 release adds embedding type support for Gemini models, updates Vertex AI integrations, and tightens error handling and cache consistency—key steps in stabilizing large multi‑agent frameworks. github.com  
+
+<break time="2s" />
+
+Directions in AI Architecture  
+
+<break time="1s" />
+
+ADK Go 1.0 Enables Production‑Grade Multi‑Agent Systems  
+
+<break time="1s" />
+
+Google launched the Agent Development Kit (ADK) for Go 1.0, designed for scalable, concurrent AI agent frameworks. It introduces OpenTelemetry tracing for debugging, a plugin system for security and self‑healing, and human‑in‑the‑loop guardrails—bringing strong engineering patterns to agentic AI. developers.googleblog.com  
+
+<break time="2s" />
+
+AI For Productivity  
+
+<break time="1s" />
+
+Slackbot Evolves Into an Enterprise‑Grade AI Agent  
+
+<break time="1s" />
+
+Slack announced a sweeping overhaul of Slackbot, adding 30 new AI capabilities that let it schedule meetings, control third‑party apps, take cross‑platform notes, and even act as a lightweight CRM. With reusable “AI‑Skills,” it represents Salesforce’s push to make Slack the central hub for human‑AI collaboration. venturebeat.com  
+
+<break time="2s" />
+
+World Impact  
+
+<break time="1s" />
+
+The week’s advances highlight a transition from research to industrial AI ecosystems—where reliability, observability, and efficiency are top priorities. As libraries like TRL, Pydantic‑AI, and ADK Go enter production maturity, organizations are rapidly equipping AI to operate safely and autonomously at scale.  
+
+<break time="2s" />
+
+That is your weekly summary of this week's AI news.  
+
+<break time="1s" />
+
+Sources this week: huggingface.co, github.com, developers.googleblog.com, venturebeat.com.

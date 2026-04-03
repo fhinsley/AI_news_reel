@@ -1,0 +1,131 @@
+I now have all the material I need. Let me write the script.
+
+Welcome to the AI Newsreel. This is a weekly summary of the news in AI for the week of March 28 through April 3, 2026.
+
+<break time="1s" />
+
+This week: Anthropic's upcoming Claude Mythos model leaked from an unsecured data store, revealing a new tier of capability above Opus. Google wrapped up a month of sweeping AI updates across Search, Workspace, and Pixel devices, including a globally expanded voice search and a new agentic coding tool. Alibaba's Qwen 3.5 family impressed across all model sizes, with smaller versions outperforming much larger competitors. DeepSeek excluded U.S. chip makers from testing its forthcoming 4.0 model, deepening the AI hardware divide between the U.S. and China. Researchers at Meta and partner institutions demonstrated a self-improving AI agent framework that rewrote its own prompts and boosted performance across coding, math, and robotics tasks. And Waymo reported five hundred thousand paid robotaxi rides per week, double the figure from the same time last year.
+
+<break time="1s" />
+
+Here is what happened.
+
+<break time="2s" />
+
+Core Tech Releases
+
+<break time="1s" />
+
+Anthropic Leaks Its Most Capable Model Yet
+
+<break time="1s" />
+
+A configuration error in Anthropic's content management system left nearly three thousand unpublished assets in a publicly accessible, searchable data store this week, according to Fortune, which first reported the leak on March 26. Among the exposed files was a draft blog post describing a new AI model the company refers to internally as Claude Mythos. The leak also revealed a new model tier called Capybara, described in the draft as "larger and more intelligent than our Opus models, which were, until now, our most powerful."
+
+<break time="1s" />
+
+Anthropic confirmed the model's existence after being contacted by Fortune, and an Anthropic spokesperson described it as "a step change" and "the most capable we have built to date." The company said the model is currently in testing with a small group of early access customers and is not ready for general release, in part because it is expensive to operate. The leaked documents also flagged what Anthropic called unprecedented cybersecurity risks, noting the model's ability to identify and exploit software vulnerabilities at a level that outpaces existing defenses. Cybersecurity stocks dropped noticeably in the days following the leak. Anthropic attributed the exposure to human error and removed public access to the data store shortly after being notified.
+
+<break time="1s" />
+
+Qwen 3.5 Punches Above Its Weight
+
+<break time="1s" />
+
+Alibaba released the Qwen 3.5 family of open weights vision-language models this week, and the results drew attention across the research community. The family spans sizes from less than one billion parameters to significantly larger configurations, all built on a mixture-of-experts architecture. According to DeepLearning.AI's The Batch, the smaller Qwen 3.5 model outperforms an OpenAI open weights model roughly ten times its size, a result that reflects ongoing efficiency gains in Chinese AI labs. The larger models in the family also lead several vision benchmarks, making Qwen 3.5 one of the more competitive open weights releases of the month.
+
+<break time="1s" />
+
+DeepSeek Closes Door to U.S. Chip Makers
+
+<break time="1s" />
+
+DeepSeek, the Chinese AI developer behind several well-regarded open weights models, gave Chinese chip makers access to performance benchmarks for its upcoming 4.0 model while withholding the same access from U.S. firms, according to reporting covered in The Batch. The move is widely interpreted as a strategic alignment with Huawei and domestic Chinese hardware, at the expense of existing ties to Nvidia. DeepSeek's decision signals a deepening split in the AI hardware supply chain between U.S. and Chinese ecosystems, as Chinese AI companies increasingly prioritize domestic infrastructure over access to Western technology.
+
+<break time="2s" />
+
+Directions in AI Architecture
+
+<break time="1s" />
+
+A Self-Improving Agent Framework From Meta
+
+<break time="1s" />
+
+Researchers from Meta, the University of British Columbia, the Vector Institute, New York University, and the University of Edinburgh published a paper this week describing what they call a hyperagent, a system that can autonomously improve its own performance across arbitrary tasks. The approach, formally named the Darwin Godel Machine Hyperagent, gives a large language model a scaffold that iteratively rewrites the prompts it uses to tackle problems, and also rewrites the mechanism that generates future improvements. The result is a layered genealogy of AI agents, where higher-performing versions spawn successors until performance plateaus.
+
+<break time="1s" />
+
+The team tested the framework across four domains: coding, academic paper review, robotics reward design, and math grading at olympiad level. In most experiments, the base model used was Anthropic's Claude Sonnet 4.5. Across all four domains, the hyperagent approach substantially outperformed baseline performance. On paper review tasks, accuracy improved from essentially zero to more than seventy percent. On robotics reward design, it surpassed the performance of a reward function written to directly optimize the evaluation metric. The authors noted that while the system cannot yet alter the process by which agents are selected or evaluated, the framework raises meaningful safety considerations, given that a self-modifying agent capable of improving on arbitrary tasks represents a meaningful capability advance.
+
+<break time="1s" />
+
+Apple Builds a Single Tokenizer for All Visual Media
+
+<break time="1s" />
+
+Apple researchers published work this week on a system called AToken, a multimodal tokenizer designed to encode images, video, and three dimensional objects within a single unified framework. Current multimodal models typically handle these media types separately, using different encoders for different modalities and switching approaches when generating versus classifying content. AToken collapses those distinctions into one shared encoder and tokenizer, which simplifies the architecture and may reduce training complexity for future multimodal systems. The work appeared in the March 20 issue of The Batch and represents an early research contribution rather than a product announcement.
+
+<break time="2s" />
+
+AI For Productivity
+
+<break time="1s" />
+
+Google Rolls Out a Month of AI Updates
+
+<break time="1s" />
+
+Google wrapped up a dense March of AI feature releases this week, with updates spanning Search, the Gemini app, Workspace, Pixel devices, and its developer platform. The headline consumer update was the global expansion of Search Live, Google's voice and camera-based conversational search mode, which is now available in more than two hundred countries and territories. Users can speak to the feature or point their phone cameras at objects to get real-time answers, troubleshoot problems, or navigate unfamiliar situations hands-free.
+
+<break time="1s" />
+
+On the developer side, Google updated its AI Studio platform with a new coding agent called Google Antigravity, which converts natural language prompts into production-ready applications. The tool supports multiplayer app experiences, database integration, and connections to external services. Google also expanded Gemini Canvas in AI Mode to all U.S. users, giving anyone with access to Google Search's AI Mode a workspace for writing, planning projects, and building light applications. Separately, Google introduced Lyria 3 Pro, an updated music generation model that now supports tracks up to three minutes long with granular creative controls. The Gemini app also received tools to let users import chat history and context from competing AI assistants, lowering the friction for switching.
+
+<break time="1s" />
+
+A New Agent Framework for Political Decision-Making
+
+<break time="1s" />
+
+A paper published this week by Andy Hall, a political economy professor at Stanford, and covered in depth by Jack Clark's Import AI newsletter, outlined a concept Hall calls political superintelligence, a framework for using AI to give citizens, policymakers, and institutions better tools to understand information, weigh tradeoffs, and act in the political sphere. Hall argues AI could serve as a tireless automated delegate for citizens, monitoring policy developments and helping people advocate for their interests, but only if the surrounding institutional infrastructure is built deliberately.
+
+<break time="1s" />
+
+Hall describes three layers needed to realize this vision: an information layer, where AI improves how governments gather data and hear from citizens; a representation layer, where AI agents act on behalf of individuals in political contexts; and a governance layer, which addresses the concentration of these systems in a small number of private companies. Clark's commentary noted that even if individual AI systems are well-aligned, getting them to function well within society will require deliberate institutional design. The paper stops short of policy prescriptions but calls for more transparency requirements and standard interfaces between AI companies and the public.
+
+<break time="2s" />
+
+World Impact
+
+<break time="1s" />
+
+Waymo Crosses Five Hundred Thousand Weekly Rides
+
+<break time="1s" />
+
+Waymo announced this week that it is now completing five hundred thousand paid robotaxi rides per week across ten U.S. cities, according to TechCrunch. The figure is roughly double the company's weekly ridership from the same time last year, and a tenfold increase from fifty thousand weekly rides in May 2024. The growth has come primarily from geographic expansion. Over the past year alone, Waymo added seven Sun Belt cities to its service area: Austin, Atlanta, Miami, Dallas, Houston, San Antonio, and Orlando. Waymo's fleet remains at around three thousand vehicles, which means the company is delivering more rides from roughly the same number of cars.
+
+<break time="1s" />
+
+The company is targeting one million rides per week by the end of 2026, according to Bloomberg. Competition in the robotaxi space remains uneven. Zoox, owned by Amazon, is still in testing phases and has yet to charge customers for rides. Tesla's robotaxi service operates in Austin with safety monitors still present in vehicles. By contrast, Waymo's service is fully driverless and commercially operating across its ten markets. The company also announced it added airport service at San Antonio International this week, its fourth major airport and first in Texas. Waymo faces ongoing regulatory scrutiny from the National Highway Traffic Safety Administration and the National Transportation Safety Board over incidents involving school buses.
+
+<break time="1s" />
+
+AI Planning on Mars
+
+<break time="1s" />
+
+NASA's Jet Propulsion Laboratory published results this week from a December 2025 demonstration in which the Perseverance rover completed the first Mars drives ever planned by artificial intelligence. Using Anthropic's Claude models, engineers at JPL generated waypoints for two separate drives covering a combined four hundred fifty-six meters across the rocky terrain of Jezero Crater. The task, which human planners have performed manually since the first Mars rover missions nearly thirty years ago, involves analyzing orbital imagery and terrain data to chart a safe path before transmitting commands to the rover, where the communication delay between Earth and Mars can reach twenty minutes each way.
+
+<break time="1s" />
+
+Claude used vision capabilities to analyze overhead images and generate the route point by point, then critiqued and revised its own work before engineers ran it through a digital twin simulation of the rover and verified more than five hundred thousand telemetry variables. Minor adjustments were made based on ground-level images the model had not seen, but the overall plan was largely accurate. JPL engineers estimate that integrating AI into rover route planning could cut the planning time in half, allowing for more frequent drives and greater science return. The milestone is considered significant for deep space missions, where longer communication lag times make real-time human control impossible.
+
+<break time="2s" />
+
+That is your weekly summary of this week's AI news.
+
+<break time="1s" />
+
+Sources this week: Fortune, The Batch at DeepLearning.AI, Import AI by Jack Clark, TechCrunch, Google Blog, IT Brew, NASA Jet Propulsion Laboratory, The Decoder, Futurism.

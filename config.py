@@ -1,10 +1,13 @@
 import os
 
-from datetime import datetime
-_today = datetime.now()
-OPENING_TITLE = f"AI Newsreel | Week of {_today.strftime('%B %d, %Y')}"
-WEEK = "040126"
+from datetime import datetime, timedelta
 
+end_date = datetime.today()- timedelta(days=2)
+start_date = end_date - timedelta(days=7)
+
+OPENING_TITLE = f"AI Newsreel Week of {start_date.strftime('%b %d')} - {end_date.strftime('%b %d  %Y')}"
+WEEK_FOLDER = end_date.strftime("%m%d%y")
+WEEK_PHRASE = "This week:"
 
 #Weekly Rundown Settings
 RUNDOWN_STYLE = {"font_size": 36, "color": "white"}
@@ -13,7 +16,6 @@ RUNDOWN_HEADER_STYLE = {"font_size": 48, "color": "white"}
 RUNDOWN_Y_START = 200  # vertical position of header
 RUNDOWN_LINE_HEIGHT = 50  # pixels between lines
 RUNDOWN_END_PHRASE = "Here is what happened"
-
 
 OVERLAY_ANTICIPATION = 0.4  # seconds before timestamp to show overlay
 OVERLAY_BG_COLOR = (0, 0, 0)
@@ -32,7 +34,7 @@ SECTION_STYLE = {"font_size": 72, "color": "white", "duration": 4,"position": "c
 
 # Story overlay phase behavior
 STORY_STYLE1 = {"font_size": 52, "color": "yellow", "duration": 4, "position": "center"}
-STORY_STYLE2 = {"font_size": 32, "color": "yellow", "duration": 5, "position": ("center", 950)}
+STORY_STYLE2 = {"font_size": 32, "color": "yellow", "duration": 5, "position": ("right", 950)}
 
 #GET API KEY FROM ENVIRONMENT VARIABLES
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
@@ -49,27 +51,29 @@ SECTION_HEADERS = [
 
 SECTION_VIDEOS = {
     "intro": "stock_videos/bookend.mp4",
-    "Core Tech Releases": "stock_videos/releases.mp4",
-    "Directions in AI Architecture": "stock_videos/directions.mp4",
-    "AI For Productivity": "stock_videos/productivity.mp4",
-    "World Impact": "stock_videos/world_impact.mp4",
+    "Core Tech Releases": "stock_videos/windydesertriver.mp4",
+    "Directions in AI Architecture":"stock_videos/narrowmtnpath.mp4",
+
+    "AI For Productivity": "stock_videos/cityroadbay.mp4",
+    "World Impact": "stock_videos/grandcanyonriver.mp4",
+
     "outro": "stock_videos/bookend.mp4",
 }
 
 OUTRO_PHRASE = "That is your weekly summary"
 
-BG_VIDEOS = [
+SOURCE_PHRASE = "Sources this week:"
 
-    "stock_videos/video6_20Sec.mp4",
-    "stock_videos/newvid1.mp4",
-    "stock_videos/newvid3.mp4",
-    "stock_videos/newvid4.mp4",
-    "stock_videos/video7_10Sec.mp4",
-    "stock_videos/newvid5.mp4",
-    "stock_videos/newvid6.mp4",
-    "stock_videos/video12_9Sec.mp4",
-    "stock_videos/newvid7.mp4",
-    "stock_videos/video8_10Sec.mp4",
+BG_VIDEOS = [
+    "stock_videos/bluehardwarechip.mp4",
+    "stock_videos/yellowgreenwavy.mp4",
+    "stock_videos/world_impact.mp4",    
+    "stock_videos/grasssunset.mp4",
+    "stock_videos/productivity.mp4",
+    "stock_videos/diskdrives.mp4",
+    "stock_videos/releases.mp4",
+    "stock_videos/goldhardwarechip.mp4",
+    "stock_videos/directions.mp4",
 ]
 
 # This model handles SSML properly.  
@@ -83,13 +87,12 @@ AUDIO_OFFSET = 2  # seconds of video before audio starts
 AUDIO_CODEC = "aac"
 
 #Input/Output Files
-EL_INPUT_FILE = f"{WEEK}/News.txt"
-EL_OUTPUT_FILE = f"{WEEK}/News.mp3"
-EL_DELAY_FILE = f"{WEEK}/News_delayed.mp3"
-TIMESTAMP_FILE = f"{WEEK}/NewsTimeStamps.json"
-OUTPUT_VIDEO = f"{WEEK}/News.mp4"
+EL_INPUT_FILE = f"{WEEK_FOLDER}/News.txt"
+EL_OUTPUT_FILE = f"{WEEK_FOLDER}/News.mp3"
+EL_DELAY_FILE = f"{WEEK_FOLDER}/News_delayed.mp3"
+TIMESTAMP_FILE = f"{WEEK_FOLDER}/NewsTimeStamps.json"
+OUTPUT_VIDEO = f"{WEEK_FOLDER}/News.mp4"
 
 AUDIO_SPEED_FACTOR = 0.9
-EL_FIXED_FILE = f"{WEEK}/News_fixed.mp3"
-EL_SLOW_FILE = f"{WEEK}/News_slow.mp3"
-
+EL_FIXED_FILE = f"{WEEK_FOLDER}/News_fixed.mp3"
+EL_SLOW_FILE = f"{WEEK_FOLDER}/News_slow.mp3"

@@ -9,6 +9,9 @@ def load_timestamps(filepath):
     with open(filepath, "r") as f:
         return json.load(f)
 
+
+# Find the timestamp for a given text string,
+# using the character-level timestamps from the TTS output 
 def find_timestamp(search_text, timestamps):
     full_text = "".join(timestamps["characters"])
     pos = full_text.find(search_text)
@@ -16,6 +19,9 @@ def find_timestamp(search_text, timestamps):
         return None
     return timestamps["character_start_times_seconds"][pos]
 
+# --- Main functions for building the video ---
+
+# Parse the script to identify section headers and story lines for overlays
 def parse_script(filepath):
     overlays = []
     with open(filepath, "r") as f:
@@ -25,7 +31,7 @@ def parse_script(filepath):
             continue
         if line.startswith("<break"):
             continue
-        if line.startswith("Sources this week"):
+        if line.startswith(config.SOURCE_PHRASE):
             continue
         if line in config.SECTION_HEADERS:
             overlays.append(("section", line))
@@ -33,6 +39,7 @@ def parse_script(filepath):
             overlays.append(("story", line))
     return overlays
 
+# Functions to create text clips for overlays
 def make_text_clip(text, font_size, color, duration, position):
     return (
         TextClip(text=text, font=config.FONT, font_size=font_size, color=color)
@@ -40,6 +47,7 @@ def make_text_clip(text, font_size, color, duration, position):
         .with_duration(duration)
     )
 
+# Function to create a text clip with a semi-transparent background for better readability
 def make_text_clip_with_bg(text, font_size, color, duration, position):
     txt = TextClip(text=text, font=config.FONT, font_size=font_size, color=color)
     w, h = txt.size
@@ -54,11 +62,14 @@ def make_text_clip_with_bg(text, font_size, color, duration, position):
     
     return bg, txt
 
+# Build background video segments based on section/story change points
 def build_background_from_timestamps(video_files, change_points, total_duration, section_map=None):
     segments = []
     video_index = 0
     
+    # Iterate through change points to create video segments
     for i, (start_time, label) in enumerate(change_points):
+        # Determine the end time for this segment based on the next change point or total duration
         if i + 1 < len(change_points):
             duration = change_points[i + 1][0] - start_time
         else:
@@ -67,39 +78,48 @@ def build_background_from_timestamps(video_files, change_points, total_duration,
         # Use section-specific video if available
         if section_map and label in section_map:
             video_file = section_map[label]
+        # Otherwise, cycle through the provided video files
         else:
             video_file = video_files[video_index % len(video_files)]
             video_index += 1
         
+        # Loop the video segment to fill the duration and resize to fit the output dimensions
         clip = (VideoFileClip(video_file)
                 .with_effects([vfx.Loop(duration=duration)])
                 .resized((1920, 1080))
                 .with_start(start_time))
         
+        # Add the clip to the list of segments
         segments.append(clip)
     
     return segments
 
+# Build the FFmpeg filter string to silence artifact regions
 def parse_rundown(filepath):
     with open(filepath, "r") as f:
         content = f.read()
     
-    start = content.find("This week:")
+    # Extract the rundown section between "This week:" and the next break tag
+    start = content.find(config.WEEK_PHRASE)
     if start == -1:
         return []
     
+    # Find the end of the rundown section, which is either the next break tag or the end of the content
     end = content.find("<break", start)
     rundown_text = content[start:end].strip()
     
     # Remove the "This week:" prefix
-    rundown_text = rundown_text.replace("This week:", "").strip()
+    rundown_text = rundown_text.replace(config.WEEK_PHRASE, "").strip()
     
     # Split into sentences and clean up
     sentences = [s.strip() for s in rundown_text.split(".") if s.strip()]
     
     return sentences
 
+# Apply audio effects to silence artifacts, slow down, and add delay
 def process_audio_effects(artifact_filter):
+    
+    # Step 1 - Silence artifacts
     subprocess.run([
     "ffmpeg", "-i", config.EL_OUTPUT_FILE,
     "-af", artifact_filter,
@@ -114,16 +134,18 @@ def process_audio_effects(artifact_filter):
     "-y", config.EL_SLOW_FILE
     ], check=True)
 
-    # Step 3 - Add delay
+    # Step 3 - Add delay - this is a hack that will be removed in the next iteration or two
     subprocess.run([
         "ffmpeg", "-i", config.EL_SLOW_FILE,
         "-af", "adelay=2000|2000",
         "-y", config.EL_DELAY_FILE
     ], check=True)
 
+# Generate text overlay clips for sections and stories, with proper timing and layering
 def generate_overlay_clips(find_timestamp, make_text_clip, make_text_clip_with_bg, timestamps, overlays, clips):
     last_section_end = 0
 
+    # Iterate through the identified overlays and create text clips based on their timestamps
     for kind, text in overlays:
         t = find_timestamp(text, timestamps)
         if t is None:
@@ -132,6 +154,8 @@ def generate_overlay_clips(find_timestamp, make_text_clip, make_text_clip_with_b
 
         # Adjust for audio offset
         t = (t / config.AUDIO_SPEED_FACTOR) + config.AUDIO_OFFSET - config.OVERLAY_ANTICIPATION
+        
+        # For sections, create a text clip with a background and ensure it stays on screen for the configured duration
         if kind == "section":
             bg, txt = make_text_clip_with_bg(
             text=text,
@@ -146,7 +170,11 @@ def generate_overlay_clips(find_timestamp, make_text_clip, make_text_clip_with_b
             clips.append(txt)
             last_section_end = t + config.SECTION_STYLE["duration"]
 
+        # For stories, create two phases of text clips: the first with a larger font that appears immediately,
+        # and the second with a smaller font that appears after the first one fades out, to provide emphasis
+        # and layering for important story lines
         elif kind == "story":
+        
         # Phase 1 starts after section overlay clears
             phase1_start = max(t, last_section_end)
 
@@ -162,7 +190,7 @@ def generate_overlay_clips(find_timestamp, make_text_clip, make_text_clip_with_b
 
         # Phase 2 starts after phase 1 ends
             phase2 = make_text_clip(
-            text=text,
+            text=text ,
             font_size=config.STORY_STYLE2["font_size"],
             color=config.STORY_STYLE2["color"],
             duration=config.STORY_STYLE2["duration"],
@@ -171,8 +199,12 @@ def generate_overlay_clips(find_timestamp, make_text_clip, make_text_clip_with_b
             phase2 = phase2.with_start(phase1_start + config.STORY_STYLE1["duration"])
             clips.append(phase2)
 
+# Create a special section at the end to list sources,
+# which is parsed separately from the script and can accommodate
+# a longer list of items with smaller text
+
 def create_rundown_clips(find_timestamp, make_text_clip, timestamps, clips, rundown_sentences):
-    rundown_end_text = "Here is what happened"
+    rundown_end_text = config.RUNDOWN_END_PHRASE
     t_end = find_timestamp(rundown_end_text, timestamps)
     if t_end is not None:
         t_end = (t_end / config.AUDIO_SPEED_FACTOR) + config.AUDIO_OFFSET
@@ -212,7 +244,7 @@ def create_sources_clip(find_timestamp, make_text_clip, timestamps, clips, scrip
         content = f.read()
     
     # Find the sources line
-    start = content.find("Sources this week:")
+    start = content.find(config.SOURCE_PHRASE)
     if start == -1:
         return
     
@@ -220,10 +252,10 @@ def create_sources_clip(find_timestamp, make_text_clip, timestamps, clips, scrip
     sources_line = content[start:end].strip() if end != -1 else content[start:].strip()
     
     # Split into header and sources list
-    sources_text = sources_line.replace("Sources this week:", "").strip()
+    sources_text = sources_line.replace(config.SOURCE_PHRASE, "").strip()
     
     # Find timestamp for "Sources"
-    t = find_timestamp("Sources this week", timestamps)
+    t = find_timestamp(config.SOURCE_PHRASE, timestamps)
     if t is None:
         return
     
@@ -298,7 +330,6 @@ artifact_filter = build_ffmpeg_filter(regions)
 
 print(f"Silencing {len(regions)} artifact regions")
 process_audio_effects(artifact_filter)
-
 
 audio = AudioFileClip(config.EL_DELAY_FILE)
 timestamps = load_timestamps(config.TIMESTAMP_FILE)

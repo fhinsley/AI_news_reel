@@ -1,5 +1,7 @@
 Generate this week's AI newsreel script for the week of [START DATE] through [END DATE].
 
+START_DATE should be the date 7 days ago and END_DATE should be today's date.
+
 <!-- BROAD SEARCH APPROACH — kept for reference
      Higher session usage, can trigger rate limits on paid plans.
 
@@ -42,6 +44,13 @@ EACH SECTION:
 - Story paragraph(s)
 - Break tag after each paragraph
 
+EACH STORY:
+- should be 1–2 short paragraphs maximum.
+- Prefer clarity over completeness. Do not include secondary details unless essential.
+- Sentences should be short and direct.
+- Avoid multi-clause sentences.
+- Favor spoken rhythm over written density.
+
 CLOSING:
 - Exactly: That is your weekly summary of this week's AI news.
 - Break tag
@@ -60,7 +69,7 @@ STYLE:
 - No superlatives or editorializing
 - Attribution for strong claims
 - Spell out numbers when spoken
-- Target 8,500 to 9,500 characters total
+- output must be of length 7,000 to 9,000 characters with an absolute maximum of 9,500 characters.
 
 CONTENT FILTER — avoid:
 - Litigation or lawsuits between AI companies and government

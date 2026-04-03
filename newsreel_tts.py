@@ -6,6 +6,8 @@ from elevenlabs.client import ElevenLabs
 # --- Connect to ElevenLabs ---
 client = ElevenLabs(api_key=config.ELEVENLABS_API_KEY)
  
+# TODO: create weekly folder here once claude API is in place.
+
 # --- Read the script ---
 with open(config.EL_INPUT_FILE, "r") as f:
     script_text = f.read()

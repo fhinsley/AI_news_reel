@@ -1,0 +1,59 @@
+Generate this week's AI Newsreel script covering the period March 24 2026-March 31, 2026.
+
+Search broadly across reputable AI and technology news outlets for the top AI stories of the week. Summarize findings internally, not as quoted article text. Write the finished broadcast script directly.
+
+Follow these exact formatting and content rules:
+
+Opening:
+• First line: Welcome to the AI Newsreel. This is a weekly summary of the news in AI for the week of [DATE RANGE].
+• Follow with a break tag
+• Next paragraph must begin with exactly: This week:
+• One sentence per story in the rundown, period-separated
+• Follow with a break tag
+• Next line must be exactly: Here is what happened.
+• Follow with a break tag
+
+Sections — use these exact names in this exact order:
+Core Tech Releases
+Directions in AI Architecture
+AI For Productivity
+World Impact
+
+Each section:
+• Section name on its own line
+• <break time="2s" /> before section header
+• <break time="1s" /> before each story title and between paragraphs
+• Each story title under 60 characters with no period at end
+• Story paragraph(s) after title, separated by a <break time="1s" />
+
+Closing:
+• Must include exactly: That is your weekly summary of this week's AI news.
+• Follow with a <break time="1s" />
+• Final line must begin with exactly: Sources this week:
+• Comma-separated list of sources used
+
+Break Tag Format:
+• Leave one blank line before every break tag  
+• Never place a break tag immediately after a period on the next line  
+• Use only <break time="1s" /> and <break time="2s" />  
+
+Style:
+• AP wire style throughout  
+• No em dashes — use commas instead  
+• No spoken compound hyphens (say “AI driven”)  
+• No ALL CAPS  
+• No superlatives or editorial commentary  
+• Attribute strong claims (e.g., “according to Bloomberg”)  
+• Numbers spoken out (“seven hundred million”)  
+• Spell out abbreviations on first use  
+• Neutral tone suitable for business broadcast  
+• Avoid stories focused on lawsuits, partisan politics, or divisive issues  
+
+Content Requirements:
+• 12–14 stories total, about 3–4 per section  
+• 8,500–10,500 characters total including break tags  
+• Ensure topic variety, minimal repetition, and factual soundness  
+• Prioritize technical, research, enterprise, and global impact stories  
+
+Output:
+Produce the full AI Newsreel script directly following all structure and timing tags exactly as above. Do not include instructions, commentary, or summary of how you made it.

@@ -1,0 +1,96 @@
+Welcome to the AI Newsreel. This is a weekly summary of the news in AI for the week of March 26, 2026 through April 2, 2026.
+
+<break time="1s" />
+
+This week:
+
+<break time="1s" />
+
+Here is what happened.
+
+<break time="2s" />
+
+Core Tech Releases
+
+<break time="1s" />
+
+Nvidia opens up Nemotron 3 Super
+
+Nvidia released Nemotron 3 Super one hundred twenty billion A twelve billion, a large language model aimed at agent style applications, and it did more than publish weights. According to DeepLearning.AI, Nvidia also released training datasets and recipes, gave the model a context window of up to one million tokens, and priced third party API access at roughly thirty cents per million input tokens and eighty cents per million output tokens. The model uses a hybrid design that mixes mamba two, attention, and mixture of experts layers. DeepLearning.AI reported that it generated about four hundred forty two output tokens per second in one comparison and led open weights models on PinchBench, a test of agentic tasks. The release matters because it shows Nvidia pushing harder into the model layer at a time when Chinese open weights systems are getting stronger and more efficient on non Nvidia hardware. ([DeepLearning.ai][1])
+
+<break time="1s" />
+
+OpenAI expands with AWS agents runtime
+
+OpenAI and Amazon said they are building a stateful runtime environment for AI agents on Amazon Bedrock, a move that DeepLearning.AI described as a way to manage agents’ working state, including memories, tool connections, and user permissions. The environment is expected within months, and the partnership broadens OpenAI’s infrastructure footprint beyond Microsoft Azure while giving Amazon a path to use OpenAI models inside its own products. For companies trying to move from one shot chat to longer running software agents, that detail matters. The bottleneck is often not the model itself but the system around it, the part that keeps track of what an agent knows, what tools it can call, and what it is allowed to do. This story fits the larger pattern of the week, which is that infrastructure for agents is becoming a product category of its own, not just a feature bolted onto a chatbot. ([DeepLearning.ai][2])
+
+<break time="2s" />
+
+Directions in AI Architecture
+
+<break time="1s" />
+
+Recursive models rethink long context
+
+One of the more important research directions this week came from MIT researchers Alex L. Zhang, Tim Kraska, and Omar Khattab, who developed Recursive Language Models, or RLMs. DeepLearning.AI reported that the idea is to handle very long prompts, such as books, web searches, and large codebases, by offloading context into an external environment and managing it programmatically instead of forcing everything through a single fixed context window. The practical point is simple. When standard large language models are given very long inputs, they can lose track of details or drift into nonsense. Recursive models try to keep performance steadier by treating context more like a structured workspace than a giant text blob. That is a notable shift in architecture. It suggests that the next round of gains may come less from stuffing more tokens into the window and more from designing systems that decide what to store, what to retrieve, and when to recurse back into the task. ([The Batch | DeepLearning.AI][3])
+
+<break time="1s" />
+
+Benchmarks get a reality check
+
+There was also a strong push this week to make AI evaluation harder and more realistic. Jack Clark’s Import AI highlighted HorizonMath, a benchmark of one hundred mathematics problems designed to test more creative problem solving. On the full dataset, GPT five point four Pro scored seven percent, while Opus four point six and Gemini three point one Pro each scored three percent. Even on the easiest level, GPT five point four Pro completed half the problems, with the others at thirty percent. At the same time, MIT Technology Review published a piece titled “AI benchmarks are broken. Here’s what we need instead,” signaling broader frustration with headline scores that do not track real world usefulness. Taken together, the message is that the field is moving away from saturated tests and toward harder business tasks, proof style reasoning, and cases where models cannot rely on memorized patterns. That does not slow progress, but it does make the progress claims more grounded. ([Import AI][4])
+
+<break time="2s" />
+
+AI For Productivity
+
+<break time="1s" />
+
+From assistants to workflow redesign
+
+The enterprise productivity story this week was less about a flashy model and more about how companies are organizing work. MIT Sloan argued that generative AI should become an enterprise resource rather than an individual one, saying many organizations still focus on employees using tools on their own instead of redesigning workflows and processes around them. A related Harvard Data Science Review article went further, arguing that companies capture only marginal benefits when they layer autonomous agents onto human centered workflows. The paper cited a global industrial firm that cut audit reporting time by ninety two percent and described an Agent OS framework for rebuilding work around autonomous systems. The common thread is that productivity gains do not automatically appear because a model got smarter. They show up when a company changes the operating model, decides who owns the work, and builds the surrounding process so agents can do more than draft an email or summarize a meeting. ([MIT Sloan][5])
+
+<break time="1s" />
+
+Health copilots move closer to consumers
+
+AI health tools also moved further into consumer and workplace workflows. MIT Technology Review reported that Microsoft launched Copilot Health, where users can connect medical records and ask questions about their health. The same outlet noted that Amazon had also announced new health related AI efforts, and framed the bigger question clearly, there are more AI health tools than ever, but how well do they work. That is the right framing for a corporate audience. Health is becoming a major use case for conversational systems because it combines documentation, retrieval, follow up questions, and decision support. But it also requires caution because people naturally infer more confidence and precision from a polished AI answer than the underlying system may deserve. So the productivity angle here is real, especially for navigation, paperwork, and triage, but the adoption pattern is likely to be gradual. Stronger interfaces are arriving first, while trust, validation, and clinical integration still determine how far these tools can go. ([MBZUAI][6])
+
+<break time="2s" />
+
+World Impact
+
+<break time="1s" />
+
+Humanoids rely on hidden gig labor
+
+MIT Technology Review also published one of the week’s more revealing stories about physical AI, reporting on gig workers who are training humanoid robots at home. The description in the outlet’s feed points to a distributed labor model in which workers record movements and tasks from ordinary apartments and studios, effectively generating the demonstrations that robot systems need. That matters because it cuts through the image of humanoids as purely autonomous products emerging from sleek labs. Behind the demos, there is still a large human data pipeline. For companies watching robotics, the lesson is not that progress is fake. It is that scaling physical AI depends on data collection, annotation, and training workflows that look a lot like earlier waves of machine learning. In other words, the robotics boom is not just about better models and hardware. It is also about who does the invisible work that helps machines learn how to move through the world. ([MBZUAI][6])
+
+<break time="1s" />
+
+China pushes lower cost AI into industry
+
+CNBC’s recent China coverage underscored how quickly lower cost AI is moving into the real economy. In one report, CNBC said Chinese companies have produced low cost AI models that rival much pricier U.S. offerings, and noted that Chinese internet leaders spent about one tenth of what their U.S. peers did in capital expenditure while analysts at UBS still described model performance as comparable. In another piece, CNBC described how a local agriculture company used sensors, software, and AI from DeepSeek to optimize corn production and connect small rural plots to wider markets. This is a useful reminder that the global AI race is not only about frontier labs. It is also about who can make models cheap enough, useful enough, and integrated enough to matter in logistics, manufacturing, agriculture, and consumer platforms. The world impact story this week is that AI competition is widening from research prestige to deployment economics. ([CNBC Help Center][7])
+
+<break time="1s" />
+
+Cheaper video widens the creator market
+
+One more world facing shift came from the video side. TLDR AI highlighted Google’s Veo three point one Lite, and Google said the model is its most cost effective video generation system, available through the Gemini API at less than half the cost of Veo three point one Fast while keeping the same speed. That sounds like a developer pricing update, but the broader implication is bigger. As video generation gets cheaper, it becomes less of a novelty for a handful of well funded teams and more of a production tool for marketing, training, support, and internal communications. DeepLearning.AI reported a similar trend in xAI’s Grok Imagine one point zero, which it said topped an independent quality ranking at launch and cost far less per minute than some competing systems. The significance is not that one video model won a single week. It is that cost is moving closer to the center of the competition, and that usually expands adoption fast. ([TLDR Tech][8])
+
+<break time="1s" />
+
+That is your weekly summary of this week's AI news.
+
+<break time="1s" />
+
+Sources this week: DeepLearning.AI The Batch, Import AI, TLDR AI, CNBC, MIT Technology Review
+
+[1]: https://www.deeplearning.ai/the-batch/issue-346/ "Nvidia’s Open Salvo, OpenAI’s Amazon Deal, Grok Cuts Video Prices, and more..."
+[2]: https://www.deeplearning.ai/the-batch/openais-deal-with-amazon-to-build-a-stateful-runtime-environment-for-ai-agents/?utm_source=chatgpt.com "OpenAI's Deal With Amazon to Build A Stateful Runtime ..."
+[3]: https://charonhub.deeplearning.ai/recursive-language-models-offer-path-to-aramatically-expand-beyond-the-context-window/?utm_source=chatgpt.com "Recursive Language Models Offer Path To Dramatically ..."
+[4]: https://jack-clark.net/2026/03/30/import-ai-451-political-superintelligence-googles-society-of-minds-and-a-robot-drummer/ "Import AI 451: Political superintelligence; Google’s society of minds, and a robot drummer | Import AI "
+[5]: https://mitsloan.mit.edu/ideas-made-to-matter/action-items-ai-decision-makers-2026 "Action items for AI decision makers in 2026 | MIT Sloan"
+[6]: https://library.mbzuai.ac.ae/feed/3 "MIT Technology Review | Mohamed bin Zayed University of Artificial Intelligence"
+[7]: https://link.cnbc.com/public/42962275?utm_source=chatgpt.com "US-China AI talent race heats up"
+[8]: https://tldr.tech/ai/2026-04-01?utm_source=chatgpt.com "Claude Code leak 🔓, Veo 3.1 Lite ⚡, 1-bit models 🤏"

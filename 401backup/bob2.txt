@@ -1,0 +1,75 @@
+Here's the roundup. Note on Source 3: TLDR AI's web interface only shows a signup form and its API endpoint returned a server error — I wasn't able to pull the actual current issue. I'll flag that inline and use what was available from search results.
+
+---
+
+## Source 1 — The Batch (DeepLearning.AI) — March 20, 2026 Issue
+
+- **Drones Hit Persian Gulf Data Centers.** Iran struck at least three Amazon AWS facilities in Bahrain and the UAE using drones, marking what appears to be the first time data centers have been targeted during active warfare. The strikes underscore AI infrastructure's role as a strategic military asset in the U.S.-Iran conflict.
+
+- **DeepSeek Snubs Nvidia for Huawei.** DeepSeek made its upcoming 4.0 model available for performance testing to Chinese chipmakers but withheld access from U.S. chip companies, intensifying the U.S.-China AI rivalry. The move signals a deliberate decoupling of Chinese AI development from American semiconductor firms.
+
+- **Qwen3.5 Outperforms Bigger Models.** Alibaba released the Qwen3.5 family of open-weights vision-language models, including a smaller model that outperforms an OpenAI open-weights model ten times its size. The lineup spans sizes from under 1B parameters and leads on several vision benchmarks.
+
+- **Apple's AToken: A Single Tokenizer for Visual Media.** Apple introduced AToken, a multimodal model that uses a single encoder and tokenizer for images, videos, and 3D objects, departing from the typical approach of using separate tokenizers for different media types.
+
+- **Andrew Ng on Job Insecurity.** The letter accompanying this issue addresses widespread anxiety about AI-driven job displacement at all seniority levels, and counsels building skills and community as stable anchors during technological disruption.
+
+---
+
+## Source 2 — Import AI (Jack Clark) — Issue 451, March 30, 2026
+
+- **Political Superintelligence.** Stanford political economy professor Andy Hall argues that AI could give every person on the planet access to a "political superintelligence" — tools helping citizens, representatives, and institutions perceive reality more sharply, understand tradeoffs, and act more effectively in democratic processes. Clark notes that getting there requires significant work on the UX, governance, and oversight of those systems, not just the AI itself.
+
+- **Google's "Society of Minds" Paper.** Google researchers argue that the next intelligence explosion won't come from a single monolithic AI, but from cooperative, competitive, and creative interaction among multitudes of socially intelligent minds — most of them non-biological. They draw on the history of human institutions (writing, law, markets) as blueprints for designing AI-centric governance.
+
+- **Hyperagents: Meta-Backed Self-Improving AI.** Researchers from UBC, NYU, Edinburgh, and Meta built "Darwin Godel Machine Hyperagents" — a system where an LLM can iteratively improve both its own task-solving prompts and the mechanism it uses to generate future improvements, working across generations like an evolutionary process. Results showed dramatic performance gains on coding, paper review, robotics reward design, and olympiad-level math.
+
+- **HorizonMath: A Contamination-Proof Math Benchmark.** Researchers from Oxford, Harvard, Princeton, and the Ellison Institute built HorizonMath — 100 problems in applied and computational mathematics that are "predominantly unsolved," meaning they can't exist in any training corpus. The highest-scoring model, GPT 5.4 Pro, solved only 7% of the full dataset.
+
+- **UK Government Finds Scaling Law for AI Cyberattacks.** The UK AI Security Institute tested frontier models on simulated multi-step cyberattack scenarios and found that each successive model generation outperforms its predecessor, with the best single run completing 22 of 32 steps on a corporate network attack chain. Increasing inference-time compute yielded gains of up to 59%.
+
+---
+
+## Source 3 — TLDR AI
+
+The TLDR AI website currently renders only a signup form, and the direct newsletter API endpoint returned a server error today. The most recent issue I was able to confirm via search (approximately one month ago) covered these stories:
+
+- **OpenAI's Autonomous AI Researcher Goal.** OpenAI announced plans to build a fully automated agent-based AI researcher capable of tackling large, complex problems independently, with an autonomous AI intern targeted by September as a precursor to a full multi-agent research system in 2028.
+
+- **Elon Musk's Terafab.** Musk announced Terafab, a $20 billion joint venture between Tesla, SpaceX, and xAI to build a chip manufacturing facility in Austin aimed at generating a terawatt of computing power annually.
+
+- **Flash-MoE: Running 397B Model on a MacBook.** A project called Flash-MoE demonstrated running Qwen3.5-397B, a 397 billion parameter Mixture-of-Experts model, on a MacBook Pro with 48GB RAM at over 4 tokens per second by streaming the 209GB model from SSD through a custom Metal compute pipeline.
+
+*(Note: today's actual issue was inaccessible. The above reflects the most recent available content.)*
+
+---
+
+## Source 4 — CNBC Artificial Intelligence
+
+CNBC's AI section returned a 403 error on direct fetch; the following is drawn from its recent articles found via search.
+
+- **OpenClaw's "ChatGPT Moment" and AI Commoditization Fears.** An independent Austrian developer built OpenClaw, an open-source AI agent platform, which became a breakout hit and sparked concern that large language models are becoming commoditized — since an independent developer, not a major lab, produced the next significant AI platform. Nvidia responded by announcing NemoClaw, an enterprise security layer built on top of OpenClaw.
+
+- **Nvidia GTC 2026: Agentic AI Takes Center Stage.** At GTC 2026, CEO Jensen Huang declared agentic AI has reached an "inflection point," announcing new Vera CPU rack configurations and NemoClaw, while shifting focus away from GPUs toward the orchestration compute needed to run agents spawning other agents.
+
+- **Oracle Cutting Thousands While Ramping AI Spending.** Oracle began notifying employees of thousands of layoffs as the company grapples with a plummeting stock price tied to heavy AI infrastructure spending.
+
+- **Trump Administration's National AI Policy Framework.** The Trump administration released a legislative framework for a single national AI policy, proposing uniform safety and security guardrails while explicitly seeking to preempt state AI laws to prevent a "patchwork of fifty discordant" regulatory regimes.
+
+- **China's AI Race Enters New Phase: Industry-Specific AI.** Chinese executives say general-purpose LLMs like DeepSeek are no longer sufficient, and the new competitive race is around industry-specific AI — with Alibaba's Accio platform autonomously processing customs paperwork and calculating profit margins as one example.
+
+---
+
+## Source 5 — MIT Technology Review AI
+
+The topic page rendered only a JavaScript shell. Recent articles surfaced via search:
+
+- **QuitGPT: A Growing Campaign Against ChatGPT.** A grassroots campaign called QuitGPT urging people to cancel ChatGPT subscriptions gained significant traction, citing OpenAI's Pentagon deal, Greg Brockman's $12.5 million donation to Trump's super PAC, and ICE's use of a ChatGPT-powered résumé screening tool. MIT TR covered the campaign as a lens into public anxiety about AI's political entanglements.
+
+- **AI Is Already Making Online Crimes Easier — and Could Get Much Worse.** Security researchers debated whether the first AI-powered ransomware had arrived after ESET researchers discovered what they called PromptLock — later revealed to be a research project — while Anthropic maintained that AI agentic orchestration of multi-step intrusion campaigns represents an unprecedented and concerning shift.
+
+- **Biggest Anti-AI Protest Yet in London.** Hundreds marched through London's King's Cross AI hub in late February, organized by Pause AI and Pull the Plug, protesting concerns ranging from online slop and abusive imagery to killer robots and human extinction. MIT TR reporter Will Douglas Heaven covered the event and noted most protesters hoped public pressure would push for government regulation.
+
+- **The Most Misunderstood Graph in AI (The METR Plot).** MIT TR published a deep dive on the METR "time horizon" plot, noting that while Sequoia Capital used it to argue AGI-level employee-replacing AI is imminent, achieving a one-hour benchmark score doesn't translate directly to one hour of real-world human work replaced.
+
+- **Mechanistic Interpretability Named a 2026 Breakthrough Technology.** MIT TR included mechanistic interpretability on its 10 Breakthrough Technologies of 2026 list, citing new techniques that give researchers their best-ever look at the inner workings of LLMs — helping explain hallucinations and enabling better guardrails.
