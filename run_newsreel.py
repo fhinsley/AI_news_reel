@@ -25,6 +25,7 @@ def run_step(script_name: str) -> None:
 
 def main() -> int:
     try:
+        run_step("script_generator.py")
         run_step("newsreel_tts.py")
         run_step("build_video.py")
     except subprocess.CalledProcessError as exc:

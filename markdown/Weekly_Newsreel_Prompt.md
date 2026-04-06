@@ -1,77 +1,75 @@
-Generate this week's AI newsreel script for the week of [START DATE] through [END DATE].
+Fetch content from each of the following five sources for the week of [START DATE] through [END DATE].
+Do not include raw article text in your response. Research and summarize internally, then write the output below.
 
-START_DATE should be the date 7 days ago and END_DATE should be today's date.
-
-<!-- BROAD SEARCH APPROACH — kept for reference
-     Higher session usage, can trigger rate limits on paid plans.
-
-Search broadly for this week's top AI stories across reputable technology and AI news outlets.
-Summarize findings internally. Write the script directly from your research.
--->
-
-<!-- TARGETED FETCH APPROACH — current production method
-     Five direct URL fetches. Same story quality, fraction of the session usage. -->
-Fetch content from each of the following five sources and write the script
-directly from what you find. Do not include raw article text in your response.
-
+SOURCES:
 - https://www.deeplearning.ai/the-batch/
 - https://jack-clark.net/
 - https://tldr.tech/ai
 - https://www.cnbc.com/artificial-intelligence/
 - https://www.technologyreview.com/topic/artificial-intelligence/
 
-Follow these formatting rules exactly:
+---
 
-OPENING:
-- First line: Welcome to the AI Newsreel. This is a weekly summary of the news in AI for the week of [DATE RANGE].
-- Break tag
-- Paragraph beginning with exactly: This week:
-- Break tag
-- Exactly: Here is what happened.
-- Break tag
+OUTPUT FORMAT:
+Respond with a single valid JSON object. No preamble, no explanation, no markdown fences. Just the JSON.
 
-SECTIONS in this exact order with these exact names:
-Core Tech Releases
-Directions in AI Architecture
-AI For Productivity
-World Impact
+Schema:
 
-EACH SECTION:
-- Section name on its own line
-- Break tag
-- Story title on its own line, under 60 characters, no period at end
-- Break tag
-- Story paragraph(s)
-- Break tag after each paragraph
+{
+  "week_of": "[START DATE] to [END DATE]",
+  "sections": [
+    {
+      "section": "Core Tech Releases",
+      "stories": [
+        {
+          "title": "Story title under 60 characters, no period",
+          "body": "Story text, 600 to 1000 characters",
+          "source_name": "Publication name",
+          "source_url": "https://..."
+        }
+      ]
+    },
+    {
+      "section": "Directions in AI Architecture",
+      "stories": [...]
+    },
+    {
+      "section": "AI For Productivity",
+      "stories": [...]
+    },
+    {
+      "section": "World Impact",
+      "stories": [...]
+    }
+  ]
+}
 
-EACH STORY:
-- should be 1–2 short paragraphs maximum.
-- Prefer clarity over completeness. Do not include secondary details unless essential.
-- Sentences should be short and direct.
-- Avoid multi-clause sentences.
-- Favor spoken rhythm over written density.
+SECTIONS — use these names exactly, in this order:
+1. Core Tech Releases
+2. Directions in AI Architecture
+3. AI For Productivity
+4. World Impact
 
-CLOSING:
-- Exactly: That is your weekly summary of this week's AI news.
-- Break tag
-- Exactly: Sources this week: [comma-separated sources]
+STORY COUNT:
+- Minimum 2 stories per section, maximum 3.
+- Drop a story slot rather than padding with a weak story.
 
-BREAK TAG FORMAT:
-Always blank line before break tag. Never immediately after a period.
-Use <break time="2s" /> before section headers.
-Use <break time="1s" /> before story titles and between paragraphs.
+BODY LENGTH:
+- Each body must be 600 to 1000 characters.
+- Count carefully. Do not go under 600 or over 1000.
+- That is roughly 100 to 150 words of tight broadcast copy.
 
-STYLE:
-- AP wire style
-- No em dashes, use commas instead
-- No hyphens in spoken compound adjectives
-- No ALL CAPS
-- No superlatives or editorializing
-- Attribution for strong claims
-- Spell out numbers when spoken
-- output must be of length 7,000 to 9,000 characters with an absolute maximum of 9,500 characters.
+BODY STYLE:
+- AP wire style.
+- Short, direct sentences. No multi-clause sentences.
+- No em dashes. Use commas instead.
+- No hyphens in spoken compound adjectives.
+- No ALL CAPS. No superlatives. No editorializing.
+- Attribution for strong claims.
+- Spell out numbers as spoken words.
+- Written to be read aloud by a news anchor. Favor spoken rhythm over written density.
 
-CONTENT FILTER — avoid:
-- Litigation or lawsuits between AI companies and government
-- Politically polarizing topics
-- Stories that could divide a mixed corporate audience
+CONTENT FILTER — omit any story involving:
+- Litigation or lawsuits between AI companies and government.
+- Politically polarizing topics.
+- Stories that could divide a mixed corporate audience.

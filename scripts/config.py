@@ -3,6 +3,7 @@ from pathlib import Path
 
 from datetime import datetime, timedelta
 
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
 
@@ -10,7 +11,7 @@ PROJECT_ROOT = SCRIPT_DIR.parent
 def project_path(*parts):
     return str(PROJECT_ROOT.joinpath(*parts))
 
-end_date = datetime.today()- timedelta(days=2)
+end_date = datetime.today() - timedelta(days=1)  # Use yesterday as the end date to ensure we have a full week of news
 start_date = end_date - timedelta(days=7)
 
 OPENING_TITLE = f"AI Newsreel Week of {start_date.strftime('%b %d')} - {end_date.strftime('%b %d  %Y')}"
@@ -49,6 +50,17 @@ STORY_STYLE2 = {"font_size": 32, "color": "yellow", "duration": 5, "position": (
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
 if not ELEVENLABS_API_KEY:
     raise RuntimeError("ELEVENLABS_API_KEY environment variable is not set. Please configure your API key securely.")
+
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+if not ANTHROPIC_API_KEY:
+    raise RuntimeError("ANTHROPIC_API_KEY environment variable is not set. Please configure your API key securely.")
+
+ANTHROPIC_GENPROMPT_FILE = project_path(WEEK_FOLDER_NAME, "anthropicPrompt.txt")
+ANTHROPIC_RESPONSE_FILE = project_path(WEEK_FOLDER_NAME, "anthropicResponse.txt")
+ANTHROPIC_OUTPUT_FILE = Path(project_path(WEEK_FOLDER_NAME, "shortstories.json"))
+
+ANTHROPIC_MODEL = "claude-sonnet-4-6"
+ANTHROPIC_MAX_TOKENS = 4096
 
 #Build Video config
 SECTION_HEADERS = [
@@ -90,7 +102,11 @@ EL_MODEL_ID = "eleven_multilingual_v2"
 
 # Provider-specific voice identifier used by the text-to-speech service.
 # To change the voice, replace this with another valid voice ID from the provider's console.
-EL_VOICE_NAME = "FLpz0UhC9a7CIfUSBo6S"  # Clancy
+EL_VOICE_MAIN = "FLpz0UhC9a7CIfUSBo6S"  # Clancy
+EL_VOICE_SECTION1 = "ZthjuvLPty3kTMaNKVKb"  # Peter
+EL_VOICE_SECTION2 = "ClH95FbjM9JXsdORDh0z"  # Mary
+EL_VOICE_SECTION3 = "O7LV5fxosQChiBE7l6Wz"  # Kim
+EL_VOICE_SECTION4 = "ya031zGCAxyRGrvB3or9"  # Ryan
 
 AUDIO_OFFSET = 2  # seconds of video before audio starts
 AUDIO_CODEC = "aac"
