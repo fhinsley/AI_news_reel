@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import anthropic
-import scripts.config  # Local config file for API keys and settings
+import scripts.config  as config  # Local config file for API keys and settings
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -13,7 +13,7 @@ OUTPUT_FILE = Path("anthropic_response.txt")
 
 def generate_response(prompt: str) -> str:
 
-    api_key = scripts.config.ANTHROPIC_API_KEY  # raises clearly if missing
+    api_key = config.ANTHROPIC_API_KEY  # raises clearly if missing
 
     client = anthropic.Anthropic(api_key=api_key)
 

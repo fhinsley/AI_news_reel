@@ -51,10 +51,10 @@ CLANCY_OUTRO = (
 # ---------------------------------------------------------------------------
 
 SECTION_VOICES = [
-    ("Core Tech Releases",            config.EL_VOICE_SECTION1),  # Peter
-    ("Directions in AI Architecture", config.EL_VOICE_SECTION2),  # Mary
-    ("AI For Productivity",           config.EL_VOICE_SECTION3),  # Kim
-    ("World Impact",                  config.EL_VOICE_SECTION4),  # Ryan
+    ("Core Tech Releases",            config.EL_VOICE_SECTION1), 
+    ("Directions in AI Architecture", config.EL_VOICE_SECTION2),
+    ("AI For Productivity",           config.EL_VOICE_SECTION3),
+    ("World Impact",                  config.EL_VOICE_SECTION4),
 ]
 # ---------------------------------------------------------------------------
 # Helpers
@@ -127,10 +127,10 @@ def render_clip(text: str, voice_id: str, out_stem: str) -> None:
 # ---------------------------------------------------------------------------
 
 def main() -> int:
-    stories_file = Path(config.WEEK_FOLDER) / "shortstories.json"
+    stories_file = config.ANTHROPIC_JSON_FILE
 
     if not stories_file.exists():
-        print(f"ERROR: shortstories.json not found at {stories_file}")
+        print(f"ERROR: {stories_file} not found.")
         print("Run script_generator.py first.")
         return 1
 

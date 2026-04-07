@@ -8,19 +8,16 @@ into the scripts/ folder.
 from pathlib import Path
 import subprocess
 import sys
-
-
-PROJECT_ROOT = Path(__file__).resolve().parent
-SCRIPT_DIR = PROJECT_ROOT / "scripts"
+import scripts.config as config
 
 
 def run_step(script_name: str) -> None:
-    script_path = SCRIPT_DIR / script_name
+    script_path = config.SCRIPT_DIR / script_name
     if not script_path.exists():
         raise FileNotFoundError(f"Missing script: {script_path}")
 
     print(f"\n==> Running {script_name}")
-    subprocess.run([sys.executable, str(script_path)], cwd=PROJECT_ROOT, check=True)
+    subprocess.run([sys.executable, str(script_path)], cwd=config.PROJECT_ROOT, check=True)
 
 
 def main() -> int:

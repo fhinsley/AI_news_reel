@@ -3,16 +3,18 @@ from pathlib import Path
 
 from datetime import datetime, timedelta
 
-
+# Location of this config file is the anchor for all relative paths in the project
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
-
 
 def project_path(*parts):
     return str(PROJECT_ROOT.joinpath(*parts))
 
-end_date = datetime.today() - timedelta(days=1)  # Use yesterday as the end date to ensure we have a full week of news
+
+end_date = datetime.today() - timedelta(days=1)  # Use yesterday as the end date
 start_date = end_date - timedelta(days=7)
+
+
 
 OPENING_TITLE = f"AI Newsreel Week of {start_date.strftime('%b %d')} - {end_date.strftime('%b %d  %Y')}"
 WEEK_FOLDER_NAME = end_date.strftime("%m%d%y")
@@ -57,7 +59,11 @@ if not ANTHROPIC_API_KEY:
 
 ANTHROPIC_GENPROMPT_FILE = project_path(WEEK_FOLDER_NAME, "anthropicPrompt.txt")
 ANTHROPIC_RESPONSE_FILE = project_path(WEEK_FOLDER_NAME, "anthropicResponse.txt")
-ANTHROPIC_OUTPUT_FILE = Path(project_path(WEEK_FOLDER_NAME, "shortstories.json"))
+
+
+
+ANTHROPIC_JSON_FILE = Path(project_path(WEEK_FOLDER_NAME, "stories.json"))
+ANTHROPIC_SHORT_JSON_FILE = Path(project_path(WEEK_FOLDER_NAME, "shortstories.json"))
 
 ANTHROPIC_MODEL = "claude-sonnet-4-6"
 ANTHROPIC_MAX_TOKENS = 4096
@@ -86,15 +92,19 @@ OUTRO_PHRASE = "That is your weekly summary"
 SOURCE_PHRASE = "Sources this week:"
 
 BG_VIDEOS = [
-    project_path("stock_videos", "bluehardwarechip.mp4"),
-    project_path("stock_videos", "yellowgreenwavy.mp4"),
-    project_path("stock_videos", "world_impact.mp4"),
-    project_path("stock_videos", "grasssunset.mp4"),
-    project_path("stock_videos", "productivity.mp4"),
-    project_path("stock_videos", "diskdrives.mp4"),
-    project_path("stock_videos", "releases.mp4"),
-    project_path("stock_videos", "goldhardwarechip.mp4"),
-    project_path("stock_videos", "directions.mp4"),
+    project_path("stock_videos", "vecteezy_01.mp4"),
+    project_path("stock_videos", "vecteezy_02.mp4"),
+    project_path("stock_videos", "vecteezy_03.mp4"),
+    project_path("stock_videos", "vecteezy_04.mp4"),
+    project_path("stock_videos", "vecteezy_05.mp4"),
+    project_path("stock_videos", "vecteezy_06.mp4"),
+    project_path("stock_videos", "vecteezy_07.mp4"),
+    project_path("stock_videos", "vecteezy_08.mp4"),
+    project_path("stock_videos", "vecteezy_09.mp4"),
+    project_path("stock_videos", "vecteezy_10.mp4"),
+    project_path("stock_videos", "vecteezy_11.mp4"),
+    project_path("stock_videos", "vecteezy_12.mp4"),
+
 ]
 
 # This model handles SSML properly.  
@@ -103,10 +113,17 @@ EL_MODEL_ID = "eleven_multilingual_v2"
 # Provider-specific voice identifier used by the text-to-speech service.
 # To change the voice, replace this with another valid voice ID from the provider's console.
 EL_VOICE_MAIN = "FLpz0UhC9a7CIfUSBo6S"  # Clancy
-EL_VOICE_SECTION1 = "ZthjuvLPty3kTMaNKVKb"  # Peter
-EL_VOICE_SECTION2 = "ClH95FbjM9JXsdORDh0z"  # Mary
-EL_VOICE_SECTION3 = "O7LV5fxosQChiBE7l6Wz"  # Kim
-EL_VOICE_SECTION4 = "ya031zGCAxyRGrvB3or9"  # Ryan
+EL_VOICE_SECTION1 = "tMXujoAjiboschVOhAnk"  # Clara
+EL_VOICE_SECTION2 = "QIhD5ivPGEoYZQDocuHI"  # Adam
+EL_VOICE_SECTION3 = "qBDvhofpxp92JgXJxDjB"  # Lily Wolff
+EL_VOICE_SECTION4 = "MjDkeH2x9hCiWKXZtUPc"  # Marcos
+
+EL_VOICE_CLANCY = "FLpz0UhC9a7CIfUSBo6S"  # Clancy
+EL_VOICE_KIM = "O7LV5fxosQChiBE7l6Wz"  # Kim
+EL_VOICE_RYAN = "ya031zGCAxyRGrvB3or9"  # Ryan
+EL_VOICE_MARCOS = "MjDkeH2x9hCiWKXZtUPc"  # Marcos
+EL_VOICE_CLARA = "tMXujoAjiboschVOhAnk"  # Clara
+
 
 AUDIO_OFFSET = 2  # seconds of video before audio starts
 AUDIO_CODEC = "aac"

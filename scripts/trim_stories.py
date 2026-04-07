@@ -20,8 +20,8 @@ import config
 # ---------------------------------------------------------------------------
 
 TARGET_MIN = 580   # trim to first sentence end at or after this character count
-INPUT_FILE  = Path(config.WEEK_FOLDER) / "stories.json"
-OUTPUT_FILE = config.ANTHROPIC_OUTPUT_FILE   # shortstories.json
+INPUT_FILE  = config.ANTHROPIC_JSON_FILE    # stories.json
+OUTPUT_FILE = config.ANTHROPIC_SHORT_JSON_FILE   # shortstories.json
 
 
 # ---------------------------------------------------------------------------

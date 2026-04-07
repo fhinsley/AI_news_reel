@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Build the final newsreel video from multi-voice audio clips and stories.json.
+"""Build the final newsreel video from multi-voice audio clips and json.
 
 Pipeline:
-  1. Load stories.json — source of truth for overlays and sources
+  1. Load json — source of truth for overlays and sources
   2. Stitch the sequenced audio clips (00-99) into one timeline
   3. Build overlay list (section headers + story titles) with absolute timestamps
   4. Build background video segments keyed to section change points
@@ -174,7 +174,7 @@ def generate_overlay_clips(find_timestamp, make_text_clip, make_text_clip_with_b
 
 def load_stories_json():
     """Load stories.json and return the parsed dict."""
-    stories_file = Path(config.WEEK_FOLDER) / "stories.json"
+    stories_file = config.ANTHROPIC_JSON_FILE
     with open(stories_file, "r") as f:
         return json.load(f)
 
@@ -202,7 +202,7 @@ def parse_overlays_from_json(data):
 
 
 def build_sources_overlay(data, clips, outro_start, total_duration):
-    """Pull unique source names from stories.json and show during outro."""
+    """Pull unique source names from json and show during outro."""
     seen = set()
     source_names = []
     for section in data.get("sections", []):
