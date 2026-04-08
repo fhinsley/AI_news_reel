@@ -2,75 +2,73 @@
 
 Automated weekly AI newsreel pipeline.
 
-This project takes a weekly script, generates ElevenLabs narration with timestamps, post-processes audio for artifacts and pacing, and renders a final video with background footage and timed text overlays.
+This project uses Claude (Anthropic) to generate a weekly AI news script, trims it for broadcast length, generates multi-voice narration with timestamps via ElevenLabs, and assembles a final video with background footage and timed text overlays.
 
 ## What It Does
 
-- Reads weekly script text from a date-based folder (for example, `040226/News.txt`)
-- Generates narration and timestamp alignment using ElevenLabs
-- Silences `<break .../>` artifact regions in speech timing
-- Slows and delays narration to align with overlays
-- Builds a full newsreel video with section/story overlays and sources
-- Writes output media back to the same weekly folder
+1. **Generates the script** — Sends a prompt to Claude with web search enabled; Claude fetches current AI news and returns structured JSON stories organized into four sections
+2. **Trims stories** — Reduces each story body to a target length at a natural sentence boundary
+3. **Generates narration** — Produces six audio clips (intro, four section correspondents, outro) with per-character timestamp alignment via ElevenLabs
+4. **Assembles video** — Builds the full newsreel with section-specific background footage, overlay text timed to speech, and a sources list
 
 ## Project Layout
 
-- `run_newsreel.py`: one-command pipeline runner
-- `requirements.txt`: Python dependencies for the core pipeline
-- `scripts/newsreel_tts.py`: TTS generation + timestamp export
-- `scripts/silence_artifacts.py`: break-tag artifact detection + FFmpeg filter builder
-- `scripts/build_video.py`: video assembly and overlay timing
-- `scripts/config.py`: all runtime configuration (paths, style, voice, section rules)
-- `stock_videos/`: background clips used for sections and transitions
-- `MMDDYY/`: weekly input/output folders (script, timestamps, audio, final video)
+```
+run_newsreel.py             one-command pipeline runner
+requirements.txt            Python dependencies
+markdown/
+  Weekly_Newsreel_Prompt.md  Claude prompt template (date placeholders interpolated at runtime)
+scripts/
+  config.py                 all runtime configuration (paths, dates, voices, styles)
+  script_generator.py       step 1 — calls Claude API to generate stories.json
+  trim_stories.py           step 2 — trims stories.json → shortstories.json
+  newsreel_tts.py           step 3 — multi-voice TTS + timestamp export
+  build_video.py            step 4 — video assembly with overlays
+  silence_artifacts.py      break-tag artifact detection + FFmpeg filter builder
+  makeinoutro.py            standalone test for intro/outro wording
+  test_tts_before_11labs.py prints resolved config paths for sanity checks
+  viewscript.py             prints processed script text after cleanup
+  extract_entities.py       named-entity extraction helper
+  video_test.py             minimal MoviePy write test
+stock_videos/               background clips for sections and transitions
+MMDDYY/                     weekly output folder (auto-created, named by end date)
+```
 
 ## Requirements
 
 - Python 3.10+
 - FFmpeg installed and available in `PATH`
 - ElevenLabs API key in environment variable `ELEVENLABS_API_KEY`
+- Anthropic API key in environment variable `ANTHROPIC_API_KEY`
 
-Python packages used by the scripts:
-
-- `moviepy`
-- `elevenlabs`
-- `spacy` (used by optional entity extraction script)
-
-Install from dependency file:
+Python packages:
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-Manual install example:
-
-```bash
-python -m pip install moviepy elevenlabs spacy
-```
-
-If you use `extract_entities.py`, also install the model:
-
-```bash
-python -m spacy download en_core_web_sm
-```
+Core packages: `moviepy`, `elevenlabs`, `anthropic`
 
 ## Setup
 
-1. Set your ElevenLabs key:
+1. Set your API keys:
 
 ```bash
-export ELEVENLABS_API_KEY="your_key_here"
+export ELEVENLABS_API_KEY="your_elevenlabs_key"
+export ANTHROPIC_API_KEY="your_anthropic_key"
 ```
 
-2. Ensure the current week folder exists and contains `News.txt`.
+2. Confirm `markdown/Weekly_Newsreel_Prompt.md` exists — it is the script template.
 
-The active folder name is derived in `scripts/config.py` from date logic:
+The active week folder is derived from the current date in `scripts/config.py`:
 
-- `end_date = today - 2 days`
-- `start_date = end_date - 7 days`
-- week folder format: `MMDDYY`
+- `END_DATE = today - 1 day`
+- `START_DATE = END_DATE - 7 days`
+- Folder name format: `MMDDYY` (based on `END_DATE`)
 
-## Run The Pipeline
+The folder is created automatically when the pipeline runs.
+
+## Run the Pipeline
 
 From project root:
 
@@ -78,48 +76,54 @@ From project root:
 python run_newsreel.py
 ```
 
-This executes:
+This runs four steps in sequence:
 
-1. `scripts/newsreel_tts.py`
-2. `scripts/build_video.py`
+| Step | Script | Input | Output |
+|------|--------|-------|--------|
+| 1 | `script_generator.py` | `markdown/Weekly_Newsreel_Prompt.md` | `MMDDYY/stories.json` |
+| 2 | `trim_stories.py` | `MMDDYY/stories.json` | `MMDDYY/shortstories.json` |
+| 3 | `newsreel_tts.py` | `MMDDYY/shortstories.json` | `MMDDYY/00_intro.mp3`, `01_*.mp3` … `99_outro.mp3` + timestamp JSONs |
+| 4 | `build_video.py` | clips + timestamps | `MMDDYY/News.mp4` |
 
-## Output Files
+## Voices
 
-Generated in the active weekly folder:
+The newsreel uses five ElevenLabs voices:
 
-- `News.mp3`
-- `News_fixed.mp3`
-- `News_slow.mp3`
-- `News_delayed.mp3`
-- `NewsTimeStamps.json`
-- `News.mp4`
+| Role | Voice | Config constant |
+|------|-------|----------------|
+| Intro / Outro | Clancy | `EL_VOICE_MAIN` |
+| Core Tech Releases | Kim | `EL_VOICE_KIM` |
+| Directions in AI Architecture | Ryan | `EL_VOICE_RYAN` |
+| AI For Productivity | Marcos | `EL_VOICE_MARCOS` |
+| World Impact | Clara | `EL_VOICE_CLARA` |
+
+## Sections
+
+Each week covers four fixed sections:
+
+1. Core Tech Releases
+2. Directions in AI Architecture
+3. AI For Productivity
+4. World Impact
 
 ## Configuration Notes
 
-Main knobs live in `scripts/config.py`:
+All knobs live in `scripts/config.py`:
 
-- Voice/model: `EL_VOICE_NAME`, `EL_MODEL_ID`
-- Timing: `AUDIO_SPEED_FACTOR`, `AUDIO_OFFSET`, `OVERLAY_ANTICIPATION`
-- Overlay style: `OPENING_STYLE`, `SECTION_STYLE`, `STORY_STYLE1`, `STORY_STYLE2`
-- Rundown layout: `RUNDOWN_HEADER_STYLE`, `RUNDOWN_LINE_HEIGHT`, etc.
-- Section-video mapping: `SECTION_VIDEOS`
+- **Dates**: `END_DATE`, `START_DATE` (auto-computed; adjust offset as needed)
+- **Voices/model**: `EL_VOICE_*`, `EL_MODEL_ID`, `ANTHROPIC_MODEL`
+- **Timing**: `AUDIO_SPEED_FACTOR`, `AUDIO_OFFSET`, `OVERLAY_ANTICIPATION`
+- **Overlay style**: `OPENING_STYLE`, `SECTION_STYLE`, `STORY_STYLE1`, `STORY_STYLE2`
+- **Rundown layout**: `RUNDOWN_HEADER_STYLE`, `RUNDOWN_LINE_HEIGHT`, etc.
+- **Background videos**: `BG_VIDEOS` list, `SECTION_VIDEOS` dict
 
-All media/script paths are resolved from the project root, so running from root is stable after moving scripts into `scripts/`.
+All media paths are resolved from the project root.
 
 ## Troubleshooting
 
-- `ELEVENLABS_API_KEY environment variable is not set`:
-  - Export the key in your shell before running.
-- `ffmpeg: command not found`:
-  - Install FFmpeg and confirm `ffmpeg -version` works.
-- Missing weekly script:
-  - Confirm active date folder contains `News.txt`.
-- Missing stock video file:
-  - Check filenames listed in `SECTION_VIDEOS` and `BG_VIDEOS`.
-
-## Optional Scripts
-
-- `scripts/test_tts_before_11labs.py`: prints resolved config paths for quick path sanity checks
-- `scripts/viewscript.py`: prints processed script text after break-tag/newline cleanup
-- `scripts/extract_entities.py`: named-entity extraction helper
-- `scripts/video_test.py`: minimal MoviePy write test
+- `ELEVENLABS_API_KEY environment variable is not set` — export the key before running
+- `ANTHROPIC_API_KEY environment variable is not set` — export the key before running
+- `ffmpeg: command not found` — install FFmpeg and confirm `ffmpeg -version` works
+- `Prompt file not found` — confirm `markdown/Weekly_Newsreel_Prompt.md` exists
+- `stories.json not found` — run `script_generator.py` (step 1) before later steps
+- Missing stock video — check filenames in `SECTION_VIDEOS` and `BG_VIDEOS` in `config.py`
