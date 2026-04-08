@@ -5,7 +5,6 @@ This wrapper keeps command usage simple after moving implementation files
 into the scripts/ folder.
 """
 
-from pathlib import Path
 import subprocess
 import sys
 import scripts.config as config

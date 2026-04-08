@@ -10,9 +10,10 @@ Pipeline:
 """
 
 from moviepy import (
-    AudioFileClip, ColorClip, CompositeVideoClip,
+    AudioClip, AudioFileClip, ColorClip, CompositeVideoClip,
     TextClip, VideoFileClip, concatenate_audioclips, vfx
 )
+import numpy as np
 import config
 import json
 from pathlib import Path
@@ -112,15 +113,11 @@ def wrap_sources(sources_text, max_line_length=60):
     return "\n".join(lines)
 
 
-def generate_overlay_clips(find_timestamp, make_text_clip, make_text_clip_with_bg,
-                           timestamps, overlays, clips, time_offset=0.0):
+def generate_overlay_clips(timestamps, overlays, clips, time_offset=0.0):
     """Generate section and story overlay clips.
 
-    time_offset shifts all timestamps by the clip's start position
-    in the final stitched timeline.
-
-    Section headers are placed at the clip start time (time_offset) directly —
-    they are visual-only overlays, not spoken words in the audio.
+    time_offset: absolute start of this clip in the final stitched timeline.
+    Section headers are placed at time_offset directly — they are visual only.
     Story titles are looked up in the timestamp data.
     """
     last_section_end = 0
@@ -237,27 +234,25 @@ def build_sources_overlay(data, clips, outro_start, total_duration):
     clips.append(body)
 
 
-def stitch_audio(clip_manifest, intro_silence=2.0):
-    """Load all audio clips in order, return (concatenated_audio, clip_start_times).
+def make_silence(duration: float):
+    """Return a silent stereo AudioClip of the given duration in seconds."""
+    return AudioClip(
+        lambda t: np.zeros((2,)),
+        duration=duration,
+        fps=44100,
+    )
 
-    intro_silence: seconds of silence prepended before the first clip.
-    clip_start_times maps stem -> absolute start time in the final timeline.
+
+def stitch_audio(clip_manifest, intro_silence=2.0, inter_clip_silence=1.0):
+    """Concatenate audio clips in manifest order with surrounding silence.
+
+    Returns (combined_audio, start_times) where start_times maps
+    each stem to its absolute start position in the final timeline.
     """
-    from moviepy import AudioClip
-    import numpy as np
-
     week = Path(config.WEEK_FOLDER)
     audio_clips = []
     start_times = {}
-    cursor = intro_silence  # all clips offset by the silent intro duration
-    inter_clip_silence = 1.0  # seconds of silence between each clip
-
-    def make_silence(duration):
-        return AudioClip(
-            lambda t: np.zeros((2,)),
-            duration=duration,
-            fps=44100,
-        )
+    cursor = intro_silence
 
     for stem, label in clip_manifest:
         path = week / f"{stem}.mp3"
@@ -330,11 +325,7 @@ def main():
                 if t is not None:
                     change_points.append((clip_start + t, text))
 
-        generate_overlay_clips(
-            find_timestamp, make_text_clip, make_text_clip_with_bg,
-            timestamps, overlays, clips,
-            time_offset=clip_start,
-        )
+        generate_overlay_clips(timestamps, overlays, clips, time_offset=clip_start)
 
     change_points.sort(key=lambda x: x[0])
 

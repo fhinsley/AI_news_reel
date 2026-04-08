@@ -72,14 +72,12 @@ SECTION_HEADERS = [
 ]
 
 SECTION_VIDEOS = {
-    "intro": project_path("stock_videos", "bookend.mp4"),
-    "Core Tech Releases": project_path("stock_videos", "windydesertriver.mp4"),
-    "Directions in AI Architecture": project_path("stock_videos", "narrowmtnpath.mp4"),
-
-    "AI For Productivity": project_path("stock_videos", "cityroadbay.mp4"),
-    "World Impact": project_path("stock_videos", "grandcanyonriver.mp4"),
-
-    "outro": project_path("stock_videos", "bookend.mp4"),
+    "intro":                            project_path("stock_videos", "bookend.mp4"),
+    "Core Tech Releases":               project_path("stock_videos", "windydesertriver.mp4"),
+    "Directions in AI Architecture":    project_path("stock_videos", "narrowmtnpath.mp4"),
+    "AI For Productivity":              project_path("stock_videos", "cityroadbay.mp4"),
+    "World Impact":                     project_path("stock_videos", "grandcanyonriver.mp4"),
+    "outro":                            project_path("stock_videos", "bookend.mp4"),
 }
 
 OUTRO_PHRASE = "That is your weekly summary"
@@ -96,7 +94,21 @@ BG_VIDEOS = [
     project_path("stock_videos", "diskdrives.mp4"),
     project_path("stock_videos", "vecteezy_10.mp4"),
     project_path("stock_videos", "vecteezy_12.mp4"),
+    project_path("stock_videos", "vecteezy_13.mov"),
+    project_path("stock_videos", "vecteezy_14.mov"),
+    project_path("stock_videos", "vecteezy_15.mp4"),
+    project_path("stock_videos", "vecteezy_16.mov"),
+    project_path("stock_videos", "vecteezy_17.mov"),
+    project_path("stock_videos", "vecteezy_18.mov"),
+    project_path("stock_videos", "vecteezy_19.mov"),
+    project_path("stock_videos", "vecteezy_20.mov"),
+    project_path("stock_videos", "vecteezy_21.mov"),
+    project_path("stock_videos", "vecteezy_22.mov"),
+    project_path("stock_videos", "vecteezy_23.mov"),
+    project_path("stock_videos", "vecteezy_24.mov"),
 ]
+
+
 
 # This model handles SSML properly.  
 EL_MODEL_ID = "eleven_multilingual_v2"
