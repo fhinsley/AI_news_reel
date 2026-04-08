@@ -122,8 +122,8 @@ def validate_and_report(data: dict) -> None:
 
 def save_stories(data: dict) -> None:
     """Write the validated JSON to the weekly stories file."""
-    config.ANTHROPIC_OUTPUT_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"\nStories saved to: {config.ANTHROPIC_OUTPUT_FILE}")
+    config.ANTHROPIC_JSON_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"\nStories saved to: {config.ANTHROPIC_JSON_FILE}")
 
 def main() -> int:
     try:

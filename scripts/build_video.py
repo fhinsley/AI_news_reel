@@ -22,12 +22,12 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 CLIP_MANIFEST = [
-    ("00_clancy_intro",                 "intro"),
+    ("00_intro",                        "intro"),
     ("01_core_tech_releases",           "Core Tech Releases"),
     ("02_directions_in_ai_architecture","Directions in AI Architecture"),
     ("03_ai_for_productivity",          "AI For Productivity"),
     ("04_world_impact",                 "World Impact"),
-    ("99_clancy_outro",                 "outro"),
+    ("99_outro",                        "outro"),
 ]
 
 # ---------------------------------------------------------------------------

@@ -10,14 +10,11 @@ PROJECT_ROOT = SCRIPT_DIR.parent
 def project_path(*parts):
     return str(PROJECT_ROOT.joinpath(*parts))
 
+END_DATE = datetime.today() - timedelta(days=1)  # Use yesterday as the end date to ensure we have a full week of news. Adjust as needed.
+START_DATE = END_DATE - timedelta(days=7)
 
-end_date = datetime.today() - timedelta(days=1)  # Use yesterday as the end date
-start_date = end_date - timedelta(days=7)
-
-
-
-OPENING_TITLE = f"AI Newsreel Week of {start_date.strftime('%b %d')} - {end_date.strftime('%b %d  %Y')}"
-WEEK_FOLDER_NAME = end_date.strftime("%m%d%y")
+OPENING_TITLE = f"AI Newsreel Week of {START_DATE.strftime('%B %d')} through {END_DATE.strftime('%B %d, %Y')}"
+WEEK_FOLDER_NAME = END_DATE.strftime("%m%d%y")
 WEEK_FOLDER = project_path(WEEK_FOLDER_NAME)
 WEEK_PHRASE = "This week:"
 
@@ -60,8 +57,6 @@ if not ANTHROPIC_API_KEY:
 ANTHROPIC_GENPROMPT_FILE = project_path(WEEK_FOLDER_NAME, "anthropicPrompt.txt")
 ANTHROPIC_RESPONSE_FILE = project_path(WEEK_FOLDER_NAME, "anthropicResponse.txt")
 
-
-
 ANTHROPIC_JSON_FILE = Path(project_path(WEEK_FOLDER_NAME, "stories.json"))
 ANTHROPIC_SHORT_JSON_FILE = Path(project_path(WEEK_FOLDER_NAME, "shortstories.json"))
 
@@ -92,19 +87,15 @@ OUTRO_PHRASE = "That is your weekly summary"
 SOURCE_PHRASE = "Sources this week:"
 
 BG_VIDEOS = [
-    project_path("stock_videos", "vecteezy_01.mp4"),
     project_path("stock_videos", "vecteezy_02.mp4"),
     project_path("stock_videos", "vecteezy_03.mp4"),
-    project_path("stock_videos", "vecteezy_04.mp4"),
     project_path("stock_videos", "vecteezy_05.mp4"),
     project_path("stock_videos", "vecteezy_06.mp4"),
-    project_path("stock_videos", "vecteezy_07.mp4"),
-    project_path("stock_videos", "vecteezy_08.mp4"),
+    project_path("stock_videos", "vecteezy_04.mp4"),
     project_path("stock_videos", "vecteezy_09.mp4"),
+    project_path("stock_videos", "diskdrives.mp4"),
     project_path("stock_videos", "vecteezy_10.mp4"),
-    project_path("stock_videos", "vecteezy_11.mp4"),
     project_path("stock_videos", "vecteezy_12.mp4"),
-
 ]
 
 # This model handles SSML properly.  
@@ -123,7 +114,6 @@ EL_VOICE_KIM = "O7LV5fxosQChiBE7l6Wz"  # Kim
 EL_VOICE_RYAN = "ya031zGCAxyRGrvB3or9"  # Ryan
 EL_VOICE_MARCOS = "MjDkeH2x9hCiWKXZtUPc"  # Marcos
 EL_VOICE_CLARA = "tMXujoAjiboschVOhAnk"  # Clara
-
 
 AUDIO_OFFSET = 2  # seconds of video before audio starts
 AUDIO_CODEC = "aac"
