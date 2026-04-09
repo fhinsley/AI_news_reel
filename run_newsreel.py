@@ -23,6 +23,7 @@ def main() -> int:
     try:
         run_step("script_generator.py")
         run_step("trim_stories.py")
+        run_step("generate_transcript.py")
         run_step("newsreel_tts.py")
         run_step("build_video.py")
     except subprocess.CalledProcessError as exc:

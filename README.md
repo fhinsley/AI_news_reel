@@ -8,8 +8,9 @@ This project uses Claude (Anthropic) to generate a weekly AI news script, trims 
 
 1. **Generates the script** — Sends a prompt to Claude with web search enabled; Claude fetches current AI news and returns structured JSON stories organized into four sections
 2. **Trims stories** — Reduces each story body to a target length at a natural sentence boundary
-3. **Generates narration** — Produces six audio clips (intro, four section correspondents, outro) with per-character timestamp alignment via ElevenLabs
-4. **Assembles video** — Builds the full newsreel with section-specific background footage, overlay text timed to speech, and a sources list
+3. **Generates transcript** — Produces a formatted PDF (`Transcript.pdf`) with all stories organized by section, plus a clickable sources list at the end
+4. **Generates narration** — Produces six audio clips (intro, four section correspondents, outro) with per-character timestamp alignment via ElevenLabs
+5. **Assembles video** — Builds the full newsreel with section-specific background footage, overlay text timed to speech, and a sources list
 
 ## Project Layout
 
@@ -22,8 +23,9 @@ scripts/
   config.py                 all runtime configuration (paths, dates, voices, styles)
   script_generator.py       step 1 — calls Claude API to generate stories.json
   trim_stories.py           step 2 — trims stories.json → shortstories.json
-  newsreel_tts.py           step 3 — multi-voice TTS + timestamp export
-  build_video.py            step 4 — video assembly with overlays
+  generate_transcript.py    step 3 — builds Transcript.pdf from shortstories.json
+  newsreel_tts.py           step 4 — multi-voice TTS + timestamp export
+  build_video.py            step 5 — video assembly with overlays
   silence_artifacts.py      break-tag artifact detection + FFmpeg filter builder
   makeinoutro.py            standalone test for intro/outro wording
   test_tts_before_11labs.py prints resolved config paths for sanity checks
@@ -47,7 +49,7 @@ Python packages:
 python -m pip install -r requirements.txt
 ```
 
-Core packages: `moviepy`, `elevenlabs`, `anthropic`
+Core packages: `moviepy`, `elevenlabs`, `anthropic`, `reportlab`
 
 ## Setup
 
@@ -76,14 +78,15 @@ From project root:
 python run_newsreel.py
 ```
 
-This runs four steps in sequence:
+This runs five steps in sequence:
 
 | Step | Script | Input | Output |
 |------|--------|-------|--------|
 | 1 | `script_generator.py` | `markdown/Weekly_Newsreel_Prompt.md` | `MMDDYY/stories.json` |
 | 2 | `trim_stories.py` | `MMDDYY/stories.json` | `MMDDYY/shortstories.json` |
-| 3 | `newsreel_tts.py` | `MMDDYY/shortstories.json` | `MMDDYY/00_intro.mp3`, `01_*.mp3` … `99_outro.mp3` + timestamp JSONs |
-| 4 | `build_video.py` | clips + timestamps | `MMDDYY/News.mp4` |
+| 3 | `generate_transcript.py` | `MMDDYY/shortstories.json` | `MMDDYY/Transcript.pdf` |
+| 4 | `newsreel_tts.py` | `MMDDYY/shortstories.json` | `MMDDYY/00_intro.mp3`, `01_*.mp3` … `99_outro.mp3` + timestamp JSONs |
+| 5 | `build_video.py` | clips + timestamps | `MMDDYY/News.mp4` |
 
 ## Voices
 
@@ -127,3 +130,4 @@ All media paths are resolved from the project root.
 - `Prompt file not found` — confirm `markdown/Weekly_Newsreel_Prompt.md` exists
 - `stories.json not found` — run `script_generator.py` (step 1) before later steps
 - Missing stock video — check filenames in `SECTION_VIDEOS` and `BG_VIDEOS` in `config.py`
+- `No module named 'reportlab'` — install with `pip install reportlab`

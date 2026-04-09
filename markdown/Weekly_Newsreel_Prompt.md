@@ -2,11 +2,12 @@ Fetch content from each of the following five sources for the week of [START DAT
 Do not include raw article text in your response. Research and summarize internally, then write the output below.
 
 SOURCES:
-- https://www.deeplearning.ai/the-batch/
+
 - https://jack-clark.net/
-- https://tldr.tech/ai
+- https://syncedreview.com/
 - https://www.cnbc.com/artificial-intelligence/
 - https://www.technologyreview.com/topic/artificial-intelligence/
+- https://simonwillison.net/
 
 ---
 
