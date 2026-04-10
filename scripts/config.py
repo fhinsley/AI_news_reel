@@ -10,7 +10,9 @@ PROJECT_ROOT = SCRIPT_DIR.parent
 def project_path(*parts):
     return str(PROJECT_ROOT.joinpath(*parts))
 
-END_DATE = datetime.today() - timedelta(days=1)  # Use yesterday as the end date to ensure we have a full week of news. Adjust as needed.
+# END_DATE = datetime.today() - timedelta(days=1)
+
+END_DATE = datetime.today()
 START_DATE = END_DATE - timedelta(days=7)
 
 OPENING_TITLE = f"AI Newsreel Week of {START_DATE.strftime('%B %d')} through {END_DATE.strftime('%B %d, %Y')}"

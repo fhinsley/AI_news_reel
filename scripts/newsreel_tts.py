@@ -117,6 +117,17 @@ SECTION_VOICES = [
 # Helpers
 # ---------------------------------------------------------------------------
 
+def to_sentence_case(text: str) -> str:
+    """Convert a title to sentence case for natural spoken delivery.
+    e.g. 'Meta Debuts Muse Spark' -> 'Meta debuts Muse Spark'
+    Proper nouns will be lowercased — ElevenLabs reads this more naturally
+    than Title Case, which causes stilted word-by-word prosody.
+    """
+    if not text:
+        return text
+    return text[0].upper() + text[1:].lower()
+
+
 def build_section_text(section_name: str, stories: list) -> str:
     """Assemble spoken text for one correspondent's clip.
 
@@ -125,6 +136,7 @@ def build_section_text(section_name: str, stories: list) -> str:
       - story title and story body
       - stories
     Periods ensure the voice drops naturally before each pause.
+    Story titles are converted to sentence case for natural prosody.
     """
     PAUSE = '<break time="1s" />'
 
@@ -140,9 +152,9 @@ def build_section_text(section_name: str, stories: list) -> str:
     parts.append(ensure_period(section_name))
 
     for story in stories:
-        title = story.get("title", "").strip()
+        title = to_sentence_case(story.get("title", "").strip())
         body  = story.get("body",  "").strip()
-        # Title with period, break, then body with period
+        # Title in sentence case with period, break, then body with period
         parts.append(f"{ensure_period(title)} {PAUSE} {ensure_period(body)}")
 
     # 1s break between section name and stories, and between stories

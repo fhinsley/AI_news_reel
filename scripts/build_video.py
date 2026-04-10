@@ -122,9 +122,11 @@ def generate_overlay_clips(timestamps, overlays, clips, time_offset=0.0):
     """
     last_section_end = 0
 
-    for kind, text in overlays:
+    for item in overlays:
+        kind = item[0]
+
         if kind == "section":
-            # Place at clip start — no timestamp lookup needed
+            text = item[1]
             t = time_offset
             bg, txt = make_text_clip_with_bg(
                 text=text,
@@ -138,17 +140,21 @@ def generate_overlay_clips(timestamps, overlays, clips, time_offset=0.0):
             last_section_end = t + config.SECTION_STYLE["duration"]
             continue
 
-        # Story titles — look up in timestamp data
-        t = find_timestamp(text, timestamps)
+        # Story: item = ("story", display_title, spoken_title)
+        display_title = item[1]
+        spoken_title  = item[2]
+
+        # Use spoken title to find timestamp, display title for overlay text
+        t = find_timestamp(spoken_title, timestamps)
         if t is None:
-            print(f"  WARNING: could not find timestamp for: {text!r}")
+            print(f"  WARNING: could not find timestamp for: {spoken_title!r}")
             continue
 
         t = t + time_offset - config.OVERLAY_ANTICIPATION
         phase1_start = max(t, last_section_end)
 
         phase1 = make_text_clip(
-            text=text,
+            text=display_title,
             font_size=config.STORY_STYLE1["font_size"],
             color=config.STORY_STYLE1["color"],
             duration=config.STORY_STYLE1["duration"],
@@ -157,7 +163,7 @@ def generate_overlay_clips(timestamps, overlays, clips, time_offset=0.0):
         clips.append(phase1)
 
         phase2 = make_text_clip(
-            text=text,
+            text=display_title,
             font_size=config.STORY_STYLE2["font_size"],
             color=config.STORY_STYLE2["color"],
             duration=config.STORY_STYLE2["duration"],
@@ -171,9 +177,18 @@ def generate_overlay_clips(timestamps, overlays, clips, time_offset=0.0):
 
 def load_stories_json():
     """Load stories.json and return the parsed dict."""
-    stories_file = config.ANTHROPIC_JSON_FILE
+    stories_file = config.ANTHROPIC_SHORT_JSON_FILE
     with open(stories_file, "r") as f:
         return json.load(f)
+
+
+def to_sentence_case(text: str) -> str:
+    """Match the case transformation applied in newsreel_tts.py.
+    Ensures timestamp lookups find the title as it was actually spoken.
+    """
+    if not text:
+        return text
+    return text[0].upper() + text[1:].lower()
 
 
 def parse_overlays_from_json(data):
@@ -181,6 +196,7 @@ def parse_overlays_from_json(data):
 
     Returns list of (section_name, [(kind, text), ...]) tuples —
     one entry per section clip, in manifest order.
+    Story titles are converted to sentence case to match the spoken audio.
     """
     sections_by_name = {s["section"]: s["stories"] for s in data.get("sections", [])}
     result = []
@@ -191,9 +207,10 @@ def parse_overlays_from_json(data):
         stories = sections_by_name.get(section_label, [])
         overlays = [("section", section_label)]
         for story in stories:
-            title = story.get("title", "").strip()
-            if title:
-                overlays.append(("story", title))
+            display_title = story.get("title", "").strip()
+            spoken_title  = to_sentence_case(display_title)
+            if display_title:
+                overlays.append(("story", display_title, spoken_title))
         result.append((stem, section_label, overlays))
     return result
 
@@ -319,11 +336,12 @@ def main():
         timestamps = load_timestamps(str(ts_path))
 
         # Add story-level change points so background video cycles per story
-        for kind, text in overlays:
-            if kind == "story":
-                t = find_timestamp(text, timestamps)
+        for item in overlays:
+            if item[0] == "story":
+                spoken_title = item[2]
+                t = find_timestamp(spoken_title, timestamps)
                 if t is not None:
-                    change_points.append((clip_start + t, text))
+                    change_points.append((clip_start + t, spoken_title))
 
         generate_overlay_clips(timestamps, overlays, clips, time_offset=clip_start)
 
