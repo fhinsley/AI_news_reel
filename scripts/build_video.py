@@ -19,19 +19,6 @@ import json
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# Clip manifest — must match files produced by newsreel_tts.py, in order
-# ---------------------------------------------------------------------------
-
-CLIP_MANIFEST = [
-    ("00_intro",                        "intro"),
-    ("01_core_tech_releases",           "Core Tech Releases"),
-    ("02_directions_in_ai_architecture","Directions in AI Architecture"),
-    ("03_ai_for_productivity",          "AI For Productivity"),
-    ("04_world_impact",                 "World Impact"),
-    ("99_outro",                        "outro"),
-]
-
-# ---------------------------------------------------------------------------
 # Helpers carried forward from original build_video.py
 # ---------------------------------------------------------------------------
 
@@ -200,7 +187,7 @@ def parse_overlays_from_json(data):
     """
     sections_by_name = {s["section"]: s["stories"] for s in data.get("sections", [])}
     result = []
-    for stem, section_label in CLIP_MANIFEST:
+    for stem, section_label in config.VIDEO_CLIP_MANIFEST:
         if section_label in ("intro", "outro"):
             result.append((stem, section_label, []))
             continue
@@ -260,7 +247,7 @@ def make_silence(duration: float):
     )
 
 
-def stitch_audio(clip_manifest, intro_silence=2.0, inter_clip_silence=1.0):
+def stitch_audio(clip_manifest = config.VIDEO_CLIP_MANIFEST, intro_silence=config.VIDEO_INTRO_SILENCE, inter_clip_silence=config.VIDEO_INTER_CLIP_SILENCE):
     """Concatenate audio clips in manifest order with surrounding silence.
 
     Returns (combined_audio, start_times) where start_times maps
@@ -304,7 +291,7 @@ def main():
 
     # --- Stitch audio ---
     print("Stitching audio clips...")
-    audio, start_times = stitch_audio(CLIP_MANIFEST)
+    audio, start_times = stitch_audio()
     total_duration = audio.duration
     print(f"  Total duration: {total_duration:.1f}s\n")
 

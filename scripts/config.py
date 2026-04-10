@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-
 from datetime import datetime, timedelta
 
 # Location of this config file is the anchor for all relative paths in the project
@@ -11,11 +10,11 @@ def project_path(*parts):
     return str(PROJECT_ROOT.joinpath(*parts))
 
 # END_DATE = datetime.today() - timedelta(days=1)
-
 END_DATE = datetime.today()
-START_DATE = END_DATE - timedelta(days=7)
+START_DATE = END_DATE - timedelta(days=6)
 
 OPENING_TITLE = f"AI Newsreel Week of {START_DATE.strftime('%B %d')} through {END_DATE.strftime('%B %d, %Y')}"
+
 WEEK_FOLDER_NAME = END_DATE.strftime("%m%d%y")
 WEEK_FOLDER = project_path(WEEK_FOLDER_NAME)
 WEEK_PHRASE = "This week:"
@@ -110,24 +109,41 @@ BG_VIDEOS = [
     project_path("stock_videos", "vecteezy_24.mov"),
 ]
 
+VIDEO_CLIP_MANIFEST = [
+    ("00_intro",                        "intro"),
+    ("01_core_tech_releases",           "Core Tech Releases"),
+    ("02_directions_in_ai_architecture","Directions in AI Architecture"),
+    ("03_ai_for_productivity",          "AI For Productivity"),
+    ("04_world_impact",                 "World Impact"),
+    ("99_outro",                        "outro"),
+]
 
+VIDEO_INTRO_SILENCE     = 2.0   # seconds
+VIDEO_INTER_CLIP_SILENCE = 1.0  # seconds
+
+SRT_TARGET_WORDS = 6          # aim for this many words per caption line
+SRT_MAX_DURATION = 3.0        # never let a caption run longer than this (seconds)
+SRT_MIN_DURATION = 0.5        # never shorter than this
+SRT_OUTPUT_FILE = Path(project_path(WEEK_FOLDER_NAME, "Captions.srt"))
 
 # This model handles SSML properly.  
 EL_MODEL_ID = "eleven_multilingual_v2"
 
-# Provider-specific voice identifier used by the text-to-speech service.
-# To change the voice, replace this with another valid voice ID from the provider's console.
-EL_VOICE_MAIN = "FLpz0UhC9a7CIfUSBo6S"  # Clancy
-EL_VOICE_SECTION1 = "tMXujoAjiboschVOhAnk"  # Clara
-EL_VOICE_SECTION2 = "QIhD5ivPGEoYZQDocuHI"  # Adam
-EL_VOICE_SECTION3 = "qBDvhofpxp92JgXJxDjB"  # Lily Wolff
-EL_VOICE_SECTION4 = "MjDkeH2x9hCiWKXZtUPc"  # Marcos
+# Currently used voices. MAIN is used for intro and outro:
 
-EL_VOICE_CLANCY = "FLpz0UhC9a7CIfUSBo6S"  # Clancy
-EL_VOICE_KIM = "O7LV5fxosQChiBE7l6Wz"  # Kim
-EL_VOICE_RYAN = "ya031zGCAxyRGrvB3or9"  # Ryan
-EL_VOICE_MARCOS = "MjDkeH2x9hCiWKXZtUPc"  # Marcos
-EL_VOICE_CLARA = "tMXujoAjiboschVOhAnk"  # Clara
+EL_VOICE_CLANCY = "FLpz0UhC9a7CIfUSBo6S"    # Clancy (MAIN)
+EL_VOICE_MAIN   = EL_VOICE_CLANCY               # alias used by newsreel_tts.py
+EL_VOICE_KIM = "O7LV5fxosQChiBE7l6Wz"       # Kim (Section 1)
+EL_VOICE_RYAN = "ya031zGCAxyRGrvB3or9"      # Ryan (Section 2)
+EL_VOICE_MARCOS = "MjDkeH2x9hCiWKXZtUPc"    # Marcos (Section 3)
+EL_VOICE_CLARA = "tMXujoAjiboschVOhAnk"     # Clara (Section 4)
+
+# Test voices
+EL_VOICE_TEST_MAIN = "FLpz0UhC9a7CIfUSBo6S"  # Clancy
+EL_VOICE_TEST_SECTION1 = "tMXujoAjiboschVOhAnk"  # Clara
+EL_VOICE_TEST_SECTION2 = "QIhD5ivPGEoYZQDocuHI"  # Adam
+EL_VOICE_TEST_SECTION3 = "qBDvhofpxp92JgXJxDjB"  # Lily Wolff
+EL_VOICE_TEST_SECTION4 = "MjDkeH2x9hCiWKXZtUPc"  # Marcos
 
 AUDIO_OFFSET = 2  # seconds of video before audio starts
 AUDIO_CODEC = "aac"

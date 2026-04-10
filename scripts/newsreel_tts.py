@@ -94,7 +94,7 @@ _date_range = f"{spoken_date(config.START_DATE)} through {spoken_date(config.END
 INTRO = (
     "Welcome to the AI Newsreel "
     f"for the week of {_date_range}. "
-    "this week, we have news about the latest tech releases, directions in AI architecture, applications of AI for productivity, and the impact of AI on the world. "
+    "This week, we have news about the latest tech releases, directions in AI architecture, applications of AI for productivity, and the impact of AI on the world. "
     "Let's get started."
 )
 

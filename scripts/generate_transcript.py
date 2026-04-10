@@ -29,7 +29,7 @@ import config
 # ---------------------------------------------------------------------------
 
 INPUT_FILE  = config.ANTHROPIC_SHORT_JSON_FILE
-OUTPUT_FILE = Path(config.WEEK_FOLDER) / "Transcript.pdf"
+OUTPUT_FILE = Path(config.WEEK_FOLDER) / f"Transcript{config.WEEK_FOLDER_NAME}.pdf"
 
 # ---------------------------------------------------------------------------
 # Styles

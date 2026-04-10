@@ -2,15 +2,17 @@
 
 Automated weekly AI newsreel pipeline.
 
-This project uses Claude (Anthropic) to generate a weekly AI news script, trims it for broadcast length, generates multi-voice narration with timestamps via ElevenLabs, and assembles a final video with background footage and timed text overlays.
+This project uses Claude (Anthropic) to generate a weekly AI news script, trims it for broadcast length, generates multi-voice narration with timestamps via ElevenLabs, assembles a final video with background footage and timed text overlays, and publishes it to YouTube with closed captions.
 
 ## What It Does
 
 1. **Generates the script** — Sends a prompt to Claude with web search enabled; Claude fetches current AI news and returns structured JSON stories organized into four sections
 2. **Trims stories** — Reduces each story body to a target length at a natural sentence boundary
-3. **Generates transcript** — Produces a formatted PDF (`Transcript.pdf`) with all stories organized by section, plus a clickable sources list at the end
-4. **Generates narration** — Produces six audio clips (intro, four section correspondents, outro) with per-character timestamp alignment via ElevenLabs
-5. **Assembles video** — Builds the full newsreel with section-specific background footage, overlay text timed to speech, and a sources list
+3. **Generates narration** — Produces six audio clips (intro, four section correspondents, outro) with per-character timestamp alignment via ElevenLabs
+4. **Assembles video** — Builds the full newsreel with section-specific background footage, overlay text timed to speech, and a sources list
+5. **Generates captions** — Produces a standard SRT file (`Captions.srt`) from the ElevenLabs character-level timestamps for closed captioning
+6. **Generates transcript** — Produces a formatted PDF (`Transcript.pdf`) with all stories organized by section, plus a clickable sources list at the end
+7. **Uploads to YouTube** — Authenticates via OAuth, uploads `News.mp4` with metadata and tags, attaches the SRT caption track, and adds the video to the newsreel playlist
 
 ## Project Layout
 
@@ -23,9 +25,11 @@ scripts/
   config.py                 all runtime configuration (paths, dates, voices, styles)
   script_generator.py       step 1 — calls Claude API to generate stories.json
   trim_stories.py           step 2 — trims stories.json → shortstories.json
-  generate_transcript.py    step 3 — builds Transcript.pdf from shortstories.json
-  newsreel_tts.py           step 4 — multi-voice TTS + timestamp export
-  build_video.py            step 5 — video assembly with overlays
+  newsreel_tts.py           step 3 — multi-voice TTS + timestamp export
+  build_video.py            step 4 — video assembly with overlays
+  generate_srt.py           step 5 — builds Captions.srt from character-level timestamps
+  generate_transcript.py    step 6 — builds Transcript.pdf from shortstories.json
+  upload_youtube.py         step 7 — OAuth upload of video + captions to YouTube
   silence_artifacts.py      break-tag artifact detection + FFmpeg filter builder
   makeinoutro.py            standalone test for intro/outro wording
   test_tts_before_11labs.py prints resolved config paths for sanity checks
@@ -42,6 +46,7 @@ MMDDYY/                     weekly output folder (auto-created, named by end dat
 - FFmpeg installed and available in `PATH`
 - ElevenLabs API key in environment variable `ELEVENLABS_API_KEY`
 - Anthropic API key in environment variable `ANTHROPIC_API_KEY`
+- Google Cloud OAuth credentials for YouTube upload (see Setup below)
 
 Python packages:
 
@@ -49,7 +54,7 @@ Python packages:
 python -m pip install -r requirements.txt
 ```
 
-Core packages: `moviepy`, `elevenlabs`, `anthropic`, `reportlab`
+Core packages: `moviepy`, `elevenlabs`, `anthropic`, `reportlab`, `google-auth`, `google-auth-oauthlib`, `google-api-python-client`
 
 ## Setup
 
@@ -61,6 +66,8 @@ export ANTHROPIC_API_KEY="your_anthropic_key"
 ```
 
 2. Confirm `markdown/Weekly_Newsreel_Prompt.md` exists — it is the script template.
+
+3. For YouTube upload, download OAuth 2.0 credentials from Google Cloud Console (with YouTube Data API v3 enabled) and save the file as `scripts/client_secrets.json`. On the first run, a browser window will open for authorization; the token is saved to `scripts/youtube_token.pickle` so subsequent runs are fully headless.
 
 The active week folder is derived from the current date in `scripts/config.py`:
 
@@ -84,9 +91,11 @@ This runs five steps in sequence:
 |------|--------|-------|--------|
 | 1 | `script_generator.py` | `markdown/Weekly_Newsreel_Prompt.md` | `MMDDYY/stories.json` |
 | 2 | `trim_stories.py` | `MMDDYY/stories.json` | `MMDDYY/shortstories.json` |
-| 3 | `generate_transcript.py` | `MMDDYY/shortstories.json` | `MMDDYY/Transcript.pdf` |
-| 4 | `newsreel_tts.py` | `MMDDYY/shortstories.json` | `MMDDYY/00_intro.mp3`, `01_*.mp3` … `99_outro.mp3` + timestamp JSONs |
-| 5 | `build_video.py` | clips + timestamps | `MMDDYY/News.mp4` |
+| 3 | `newsreel_tts.py` | `MMDDYY/shortstories.json` | `MMDDYY/00_intro.mp3`, `01_*.mp3` … `99_outro.mp3` + timestamp JSONs |
+| 4 | `build_video.py` | clips + timestamps | `MMDDYY/News.mp4` |
+| 5 | `generate_srt.py` | timestamp JSONs | `MMDDYY/Captions.srt` |
+| 6 | `generate_transcript.py` | `MMDDYY/shortstories.json` | `MMDDYY/Transcript.pdf` |
+| 7 | `upload_youtube.py` | `News.mp4` + `Captions.srt` | published YouTube video |
 
 ## Voices
 
@@ -131,3 +140,6 @@ All media paths are resolved from the project root.
 - `stories.json not found` — run `script_generator.py` (step 1) before later steps
 - Missing stock video — check filenames in `SECTION_VIDEOS` and `BG_VIDEOS` in `config.py`
 - `No module named 'reportlab'` — install with `pip install reportlab`
+- `scripts/client_secrets.json not found` — download OAuth credentials from Google Cloud Console (YouTube Data API v3 must be enabled) and save as `scripts/client_secrets.json`
+- `No module named 'googleapiclient'` — install with `pip install google-api-python-client google-auth-oauthlib`
+- YouTube upload fails with quota error — YouTube Data API has a daily quota; each upload consumes ~1600 units against a 10,000 unit/day default

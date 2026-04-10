@@ -9,20 +9,26 @@ __pycache__/
 # Large media files (generated outputs and stock assets)
 *.mp3
 *.mp4
+*.mov
 *.zip
 
 # Stock video assets (large binary files)
 stock_videos/
 
-# Weekly output folders (e.g. 032726/)
+# Weekly output folders (e.g. 032726/, 040926_1/)
 [0-9][0-9][0-9][0-9][0-9][0-9]/
+[0-9][0-9][0-9][0-9][0-9][0-9]_*/
 
 # Scratch folders
 up/
 old/
+old_*/
 
 # Environment / secrets
 .env
+scripts/client_secrets.json
+scripts/youtube_token.pickle
+*.pickle
 
 # Claude Code local config
 .claude/

@@ -84,7 +84,7 @@ _date_range = f"{spoken_date(_start)} through {spoken_date(_end)}, {spoken_year(
 INTRO = (
     "Welcome to the AI Newsreel "
     f"for the week of {_date_range}. "
-    "this week, we have news about the latest tech releases, directions in AI architecture, applications of AI for productivity, and the impact of AI on the world. "
+    "This week, we have news about the latest tech releases, directions in AI architecture, applications of AI for productivity, and the impact of AI on the world. "
     "Let's get started."
 )
 
@@ -128,7 +128,7 @@ def render_clip(text: str, voice_id: str, out_stem: str) -> None:
 def main() -> int:
 
     # --- 00 Intro ---
-    #render_clip(INTRO, config.EL_VOICE_MAIN, "00_intro")
+    render_clip(INTRO, config.EL_VOICE_MAIN, "00_intro")
 
     print(INTRO)
 

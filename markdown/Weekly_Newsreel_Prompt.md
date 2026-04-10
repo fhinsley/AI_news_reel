@@ -1,4 +1,4 @@
-Fetch content from each of the following five sources for the week of [START DATE] through [END DATE].
+Fetch content from each of the following sources for the week of [START DATE] through [END DATE].
 Do not include raw article text in your response. Research and summarize internally, then write the output below.
 
 SOURCES:
@@ -7,7 +7,9 @@ SOURCES:
 - https://syncedreview.com/
 - https://www.cnbc.com/artificial-intelligence/
 - https://www.technologyreview.com/topic/artificial-intelligence/
+- https://www.deeplearning.ai/the-batch/
 - https://simonwillison.net/
+- https://tldr.tech/ai
 
 ---
 
@@ -75,3 +77,8 @@ CONTENT FILTER — omit any story involving:
 - Litigation or lawsuits between AI companies and government.
 - Politically polarizing topics.
 - Stories that could divide a mixed corporate audience.
+
+DEDUPLICATION — across all four sections:
+- Each company, product, or model name may appear in only one story.
+- If a development could fit multiple sections, place it in the most relevant one only.
+- Do not report on the same event or announcement from two different angles across sections.
