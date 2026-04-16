@@ -1,15 +1,4 @@
 #!/usr/bin/env python3
-"""Upload the weekly newsreel video and captions to YouTube.
-
-First run: opens a browser window to authorize access to your YouTube
-channel. Saves a token file so all subsequent runs are fully headless.
-
-Uploads:
-  - News.mp4     → video
-  - Captions.srt → caption track (English)
-
-Pipeline position: run after build_video.py and generate_srt.py.
-"""
 
 import json
 import os
@@ -183,19 +172,8 @@ def upload_captions(youtube, video_id: str) -> None:
 # ---------------------------------------------------------------------------
 
 def main() -> int:
-    if not SECRETS_FILE.exists():
-        print(f"ERROR: {SECRETS_FILE} not found.")
-        print("Download OAuth credentials from Google Cloud Console and save as client_secrets.json")
-        return 1
-
     try:
-        youtube  = get_youtube_client()
-        video_id = upload_video(youtube)
-        upload_captions(youtube, video_id)
-        add_to_playlist(youtube, video_id)
-        url = f"https://www.youtube.com/watch?v={video_id}"
-        print(f"\nDone. Watch: {url}")
-        webbrowser.open(url)
+        webbrowser.open("https://www.youtube.com/watch?v=iHgpgJAZEpg")
         return 0
     except Exception as exc:
         print(f"\nUpload failed: {exc}")
