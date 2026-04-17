@@ -10,12 +10,12 @@ def project_path(*parts):
     return str(PROJECT_ROOT.joinpath(*parts))
 
 # END_DATE = datetime.today() - timedelta(days=1)
-END_DATE = datetime.today()
+END_DATE = datetime.today() - timedelta(days=1)
 START_DATE = END_DATE - timedelta(days=6)
 
 OPENING_TITLE = f"AI Newsreel Week of {START_DATE.strftime('%B %d')} through {END_DATE.strftime('%B %d, %Y')}"
 
-WEEK_FOLDER_NAME = END_DATE.strftime("%m%d%y")
+WEEK_FOLDER_NAME = END_DATE.strftime("%m%d%y_newsreel")
 WEEK_FOLDER = project_path(WEEK_FOLDER_NAME)
 WEEK_PHRASE = "This week:"
 

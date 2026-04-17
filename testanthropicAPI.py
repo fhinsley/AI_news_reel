@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import anthropic
-import scripts.config  as config  # Local config file for API keys and settings
+import newsreel.config as config  # Local config file for API keys and settings
 
 # ---------------------------------------------------------------------------
 # Paths

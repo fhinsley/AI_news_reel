@@ -7,7 +7,7 @@ into the scripts/ folder.
 
 import subprocess
 import sys
-import scripts.config as config
+import newsreel.config as config
 
 
 def run_step(script_name: str) -> None:
@@ -21,11 +21,11 @@ def run_step(script_name: str) -> None:
 
 def main() -> int:
     try:
-        #run_step("script_generator.py")
-        #run_step("trim_stories.py")
-        #run_step("generate_transcript.py")
-        #run_step("newsreel_tts.py")
-        #run_step("silence_artifacts.py")
+        run_step("script_generator.py")
+        run_step("trim_stories.py")
+        run_step("generate_transcript.py")
+        run_step("newsreel_tts.py")
+        run_step("silence_artifacts.py")
         run_step("build_video.py")
         run_step("generate_srt.py")
         run_step("upload_youtube.py")

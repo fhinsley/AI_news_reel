@@ -1,0 +1,22 @@
+{
+  "week_of": "April 09, 2026 to April 16, 2026",
+  "story": {
+    "headline": "Federal Reserve holds rates amid inflation uncertainty",
+    "summary": "The Federal Reserve voted unanimously to hold the federal funds rate steady at its April meeting, citing mixed economic signals and persistent core inflation above its two percent target.",
+    "anchor_intro": "The Federal Reserve kept interest rates on hold this week. The decision itself was unanimous. But the reaction split sharply along ideological lines, with left-leaning and right-leaning outlets telling very different stories about what it means and who bears the cost.",
+    "anchor_outro": "Two outlets. One decision. That is Two Sides. We will see you next week.",
+    "key_framing_difference": "Left outlets focused on the human cost of high rates on working families; right outlets focused on the inflation risk of cutting prematurely.",
+    "left_correspondent": {
+      "label": "Left Perspective",
+      "voice_key": "left",
+      "outlet_examples": ["CNN", "NPR"],
+      "script": "The Federal Reserve's decision to hold rates steady this week is drawing concern from economists who worry the central bank may be waiting too long to provide relief to working Americans. With housing costs still punishing middle-class families and credit card debt at record highs, consumer advocates are pressing for a clearer path to rate cuts. Coverage on CNN and NPR emphasized that lower-income households continue to bear a disproportionate share of the burden from sustained high borrowing costs. Several economists warned that prolonged restrictive monetary policy risks tipping an already fragile economy into unnecessary recession. The human cost of financial stress, they argued, demands more urgency from policymakers who have now held rates at elevated levels for well over a year."
+    },
+    "right_correspondent": {
+      "label": "Right Perspective",
+      "voice_key": "right",
+      "outlet_examples": ["Fox News", "Wall Street Journal"],
+      "script": "The Federal Reserve's decision to hold rates received sharply different treatment on the right, where Fox News and the Wall Street Journal focused on the inflation risk of moving too soon. Commentators praised the Fed for resisting political pressure to cut rates before the job is truly done. With core inflation remaining stubbornly above the two percent target, fiscal conservatives argued that premature easing would reignite the price increases that hammered American consumers for years. Several Wall Street Journal columnists pushed back against what they characterized as a growing chorus of voices, including inside the White House, pressuring the Fed to act for political rather than economic reasons. The dominant framing on the right: discipline now prevents a worse crisis later."
+    }
+  }
+}

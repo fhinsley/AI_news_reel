@@ -24,8 +24,8 @@ SCOPES = [
 
 PLAYLIST_ID = "PLrR4Ecy5-paebLJfd9AMHBoDXMgFeXSB5"
 
-SECRETS_FILE = Path(__file__).resolve().parent / "client_secrets.json"
-TOKEN_FILE   = Path(__file__).resolve().parent / "youtube_token.pickle"
+SECRETS_FILE = Path(__file__).resolve().parent.parent / "client_secrets.json"
+TOKEN_FILE   = Path(__file__).resolve().parent.parent / "youtube_token.pickle"
 
 # ---------------------------------------------------------------------------
 # Video metadata — pulled from config where possible

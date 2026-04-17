@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
-"""Upload the weekly newsreel video and captions to YouTube.
+"""Upload the weekly Two-Sides debate video and captions to YouTube.
+
+Identical OAuth and upload mechanics as upload_youtube.py.
+Adapted for the debate pipeline: different playlist, title derived
+from the debate proposition, debate-appropriate tags and description.
 
 First run: opens a browser window to authorize access to your YouTube
 channel. Saves a token file so all subsequent runs are fully headless.
 
 Uploads:
-  - News.mp4     → video
-  - Captions.srt → caption track (English)
+  - Debate.mp4          → video
+  - DebateCaptions.srt  → caption track (English)
 
 Pipeline position: run after build_video.py and generate_srt.py.
 """
 
 import json
-import os
 import pickle
 import webbrowser
 from pathlib import Path
@@ -23,6 +26,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
 import config
+from generate_srt import SRT_OUTPUT_FILE
 
 # ---------------------------------------------------------------------------
 # Auth config
@@ -33,30 +37,32 @@ SCOPES = [
     "https://www.googleapis.com/auth/youtube.force-ssl",
 ]
 
-PLAYLIST_ID = "PLrR4Ecy5-paebLJfd9AMHBoDXMgFeXSB5"
+# Replace with your Two-Sides playlist ID once created in YouTube Studio.
+# Grab the ID from the playlist URL: ?list=XXXXXXXXXX
+DEBATE_PLAYLIST_ID = "PLrR4Ecy5-paerFxTneDsXZL5A8RuvutCU"
 
-SECRETS_FILE = Path(__file__).resolve().parent / "client_secrets.json"
-TOKEN_FILE   = Path(__file__).resolve().parent / "youtube_token.pickle"
-
-# ---------------------------------------------------------------------------
-# Video metadata — pulled from config where possible
-# ---------------------------------------------------------------------------
-
-CATEGORY_ID  = "28"        # Science & Technology
-PRIVACY      = "public"    # "public", "unlisted", or "private"
-TAGS         = ["AI", "artificial intelligence", "AI news", "weekly AI newsreel",
-                "machine learning", "tech news"]
+# Reuse the same OAuth credentials and token as the newsreel pipeline.
+SECRETS_FILE = config.PROJECT_ROOT / "client_secrets.json"
+TOKEN_FILE   = config.PROJECT_ROOT / "youtube_token.pickle"
 
 # ---------------------------------------------------------------------------
-# Auth
+# Video metadata
+# ---------------------------------------------------------------------------
+
+CATEGORY_ID = "28"       # Science & Technology
+PRIVACY     = "public"   # "public", "unlisted", or "private"
+
+TAGS = [
+    "politics", "debate", "point counterpoint",
+    "left vs right", "media bias", "two sides",
+    "news analysis", "current events",
+]
+
+# ---------------------------------------------------------------------------
+# Auth — identical to upload_youtube.py
 # ---------------------------------------------------------------------------
 
 def get_youtube_client():
-    """Return an authenticated YouTube API client.
-
-    Loads saved credentials if available, otherwise runs the OAuth flow
-    (opens a browser on first run) and saves the token for future runs.
-    """
     creds = None
 
     if TOKEN_FILE.exists():
@@ -79,21 +85,44 @@ def get_youtube_client():
     return build("youtube", "v3", credentials=creds)
 
 # ---------------------------------------------------------------------------
-# Upload
+# Upload helpers
 # ---------------------------------------------------------------------------
 
+def load_proposition() -> tuple[str, str, str]:
+    with open(config.DEBATE_JSON_FILE, "r") as f:
+        data = json.load(f)
+    proposition   = data.get("proposition",   "Two Sides Debate")
+    topic_summary = data.get("topic_summary", "")
+    week_of       = data.get("week_of",       config.START_DATE.strftime("%B %d, %Y"))
+    return proposition, topic_summary, week_of
+
+
 def upload_video(youtube) -> str:
-    """Upload News.mp4 and return the YouTube video ID."""
     video_path = Path(config.OUTPUT_VIDEO)
     if not video_path.exists():
         raise FileNotFoundError(f"Video not found: {video_path}")
 
-    title       = config.OPENING_TITLE
+    proposition, topic_summary, week_of = load_proposition()
+
+    # YouTube enforces a 100-character title limit.
+    # Truncate the proposition at a word boundary if it would push over.
+    prefix = "Two Sides | "
+    max_prop_len = 100 - len(prefix)
+    if len(proposition) > max_prop_len:
+        truncated = proposition[:max_prop_len].rsplit(" ", 1)[0].rstrip(",;:")
+        prop_display = truncated + "..."
+    else:
+        prop_display = proposition
+    title = f"{prefix}{prop_display}"
+
     description = (
-        f"Weekly summary of AI news for {config.OPENING_TITLE.replace('AI Newsreel ', '')}.\n\n"
-        "Sources: DeepLearning.AI The Batch, Import AI, CNBC AI, "
-        "MIT Technology Review, Synced Review, Simon Willison.\n\n"
-        "Generated with an automated multi-voice pipeline using "
+        f"Week of {week_of}\n\n"
+        f"{topic_summary}\n\n"
+        f'Proposition: "{proposition}"\n\n'
+        "A structured point-counterpoint debate presenting the strongest "
+        "left-leaning and right-leaning arguments on this week's top story. "
+        "Both sides argue from genuine conviction — not strawmen.\n\n"
+        "Generated with an automated debate pipeline using "
         "Claude (Anthropic) and ElevenLabs."
     )
 
@@ -114,10 +143,12 @@ def upload_video(youtube) -> str:
         str(video_path),
         mimetype="video/mp4",
         resumable=True,
-        chunksize=1024 * 1024 * 8,  # 8 MB chunks
+        chunksize=1024 * 1024 * 8,
     )
 
     print(f"Uploading video: {video_path.name}")
+    print(f"Title: {title}")
+
     request = youtube.videos().insert(
         part="snippet,status",
         body=body,
@@ -136,32 +167,15 @@ def upload_video(youtube) -> str:
     return video_id
 
 
-def add_to_playlist(youtube, video_id: str) -> None:
-    """Add the uploaded video to the newsreel playlist."""
-    youtube.playlistItems().insert(
-        part="snippet",
-        body={
-            "snippet": {
-                "playlistId": PLAYLIST_ID,
-                "resourceId": {
-                    "kind":    "youtube#video",
-                    "videoId": video_id,
-                },
-            }
-        },
-    ).execute()
-    print(f"Added to playlist: {PLAYLIST_ID}")
-
-
 def upload_captions(youtube, video_id: str) -> None:
-    """Upload Captions.srt to the video as English captions."""
-    srt_path = config.SRT_OUTPUT_FILE
-    if not srt_path.exists():
-        print(f"WARNING: Caption file not found: {srt_path} — skipping captions.")
+    """Upload DebateCaptions.srt as English captions — identical to upload_youtube.py."""
+    if not SRT_OUTPUT_FILE.exists():
+        print(f"WARNING: {SRT_OUTPUT_FILE} not found — skipping captions.")
+        print("         Run generate_srt.py first.")
         return
 
-    print(f"Uploading captions: {srt_path.name}")
-    media = MediaFileUpload(str(srt_path), mimetype="application/octet-stream")
+    print(f"Uploading captions: {SRT_OUTPUT_FILE.name}")
+    media = MediaFileUpload(str(SRT_OUTPUT_FILE), mimetype="application/octet-stream")
 
     youtube.captions().insert(
         part="snippet",
@@ -175,8 +189,28 @@ def upload_captions(youtube, video_id: str) -> None:
         },
         media_body=media,
     ).execute()
-
     print("Captions uploaded.")
+
+
+def add_to_playlist(youtube, video_id: str) -> None:
+    if DEBATE_PLAYLIST_ID == "YOUR_DEBATE_PLAYLIST_ID_HERE":
+        print("WARNING: DEBATE_PLAYLIST_ID not set — skipping playlist assignment.")
+        print("         Paste your playlist ID into upload_youtube.py")
+        return
+
+    youtube.playlistItems().insert(
+        part="snippet",
+        body={
+            "snippet": {
+                "playlistId": DEBATE_PLAYLIST_ID,
+                "resourceId": {
+                    "kind":    "youtube#video",
+                    "videoId": video_id,
+                },
+            }
+        },
+    ).execute()
+    print(f"Added to playlist: {DEBATE_PLAYLIST_ID}")
 
 # ---------------------------------------------------------------------------
 # Main
@@ -185,7 +219,7 @@ def upload_captions(youtube, video_id: str) -> None:
 def main() -> int:
     if not SECRETS_FILE.exists():
         print(f"ERROR: {SECRETS_FILE} not found.")
-        print("Download OAuth credentials from Google Cloud Console and save as client_secrets.json")
+        print("(Same client_secrets.json used by the newsreel pipeline — no new credentials needed.)")
         return 1
 
     try:
