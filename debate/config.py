@@ -10,6 +10,15 @@ from pathlib import Path
 from datetime import datetime, timedelta
 
 # ---------------------------------------------------------------------------
+# Proposition override
+#
+# Set this to force a specific proposition for the next run.
+# Leave as empty string "" to use autonomous topic selection.
+# ---------------------------------------------------------------------------
+
+DEBATE_PROPOSITION = ""
+
+# ---------------------------------------------------------------------------
 # Paths — same anchor pattern as config.py
 # ---------------------------------------------------------------------------
 

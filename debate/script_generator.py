@@ -52,23 +52,10 @@ CRITICAL SCHEMA RULES — violations will break the downstream pipeline:
 USER_PROMPT_TEMPLATE = """
 Today is {today}. This week's date range: {start_date} through {end_date}.
 
-Search the following sources to find this week's most debatable news story:
+{proposition_override_block}Search the following sources to find coverage of the debate topic:
   Left-leaning:  {left_sources}
   Right-leaning: {right_sources}
-
-Choose a story that:
-- Has significant coverage and strong opinions on BOTH sides
-- Involves a clear proposition that one side affirms and the other opposes
-- Is policy, economic, or geopolitical in nature
-- Is NOT primarily about litigation, local news, or celebrity
 {topic_exclusion_block}
-
-From that story, derive a DEBATE PROPOSITION — a single declarative statement
-that one side affirms and the other denies. Format: "PROPOSITION: [statement]"
-Examples of well-formed propositions:
-  "The US-Iran ceasefire represents a victory for American diplomacy."
-  "The proposed tariff increases will strengthen the American economy."
-  "The administration's immigration enforcement is necessary and just."
 
 The debate has these roles:
   OPENER:    the {opener_side} debater — speaks first, argues IN FAVOR of the proposition
@@ -209,11 +196,24 @@ def load_prompt() -> str:
     concede_pivot_pct   = int(rs["concede_pivot_weight"]   * 100)
     genuine_concede_pct = int(rs["genuine_concede_weight"] * 100)
 
-    history               = load_topic_history()
-    topic_exclusion_block = format_history_for_prompt(history)
+    proposition_override = config.DEBATE_PROPOSITION.strip()
 
-    if history:
-        print(f"Excluding {len(history)} recent topic(s) from selection.")
+    if proposition_override:
+        print(f"Using proposition override: {proposition_override}")
+        topic_exclusion_block    = ""
+        proposition_override_block = (
+            f"The debate proposition has been specified. You MUST use this exact proposition "
+            f"and must NOT select a different story:\n\n"
+            f'  Proposition: "{proposition_override}"\n\n'
+            f"Search the sources below for left-leaning and right-leaning coverage "
+            f"of this specific topic to inform the debate arguments.\n\n"
+        )
+    else:
+        history               = load_topic_history()
+        topic_exclusion_block = format_history_for_prompt(history)
+        proposition_override_block = ""
+        if history:
+            print(f"Excluding {len(history)} recent topic(s) from selection.")
 
     return USER_PROMPT_TEMPLATE.format(
         today          = end_date.strftime("%B %d, %Y"),
@@ -241,6 +241,7 @@ def load_prompt() -> str:
         anchor_outro_min = config.ANCHOR_OUTRO_WORDS[0],
         anchor_outro_max = config.ANCHOR_OUTRO_WORDS[1],
         topic_exclusion_block = topic_exclusion_block,
+        proposition_override_block = proposition_override_block,
     )
 
 
