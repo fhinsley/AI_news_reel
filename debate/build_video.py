@@ -341,7 +341,8 @@ def main():
     t_rebuttal = start_times.get("03_opener_rebuttal")
     if t_rebuttal is not None:
         change_points.append((t_rebuttal, opener_side))
-        add_side_label(clips, f"{opener_side.upper()} REBUTTAL", t_rebuttal)
+        opener_display = config.LEFT_LABEL if opener_side == "left" else config.RIGHT_LABEL
+        add_side_label(clips, f"{opener_display.upper()} REBUTTAL", t_rebuttal)
 
     # --- Anchor outro ---
     t_outro = start_times.get("04_anchor_outro")

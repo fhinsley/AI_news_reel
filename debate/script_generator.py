@@ -27,7 +27,7 @@ import config
 # Prompt construction
 # ---------------------------------------------------------------------------
 
-SYSTEM_PROMPT = """
+_NEWS_SYSTEM_PROMPT = """
 You are a debate script writer. You write structured point-counterpoint debates
 between two ideologically opposed debaters — one arguing from a left-leaning
 perspective, one from a right-leaning perspective.
@@ -42,12 +42,38 @@ Your writing rules:
 - Return ONLY valid JSON. No preamble, no markdown fences, no text outside the JSON.
 
 CRITICAL SCHEMA RULES — violations will break the downstream pipeline:
-- The responder_turn object MUST contain exactly two content keys: "rebuttal" and "argument".
-  Do NOT use "rebuttal_argument", "affirmative_argument", "own_argument", "case", or any
-  other variant. The key names must be exactly "rebuttal" and "argument".
+- responder_turn MUST have TWO separate keys: "rebuttal" AND "argument". Both are required.
+  "rebuttal" = response to opener's attacks. "argument" = responder's own affirmative case.
+  Never combine them. Never omit "argument". Never rename either key.
 - Every script field must be a plain string. No nested objects inside script values.
 - All other key names must match the schema exactly as shown in the user prompt.
 """
+
+_SPORTS_SYSTEM_PROMPT = """
+You are a sports debate script writer. You write combative point-counterpoint debates
+between two sports analysts — one arguing from a traditionalist perspective (eye test,
+veteran instinct, intangibles, team culture, coaching) and one from an analytics
+perspective (efficiency metrics, advanced stats, sample size, market pricing, models).
+
+Your writing rules:
+- Both analysts are opinionated, confident, and not inclined to back down.
+- The traditionalist distrusts models and trusts what they see on film and in the locker room.
+- The analytics analyst distrusts narrative and trusts repeatable, predictive data.
+- Arguments reference specific teams, players, stats, or situations from current sports news.
+- Neither analyst concedes gracefully — this is a debate, not a seminar.
+- No em dashes. No bullet points inside scripts. Numbers spelled out.
+- Broadcast-ready prose — the energy of talk radio, not a press conference.
+- Return ONLY valid JSON. No preamble, no markdown fences, no text outside the JSON.
+
+CRITICAL SCHEMA RULES — violations will break the downstream pipeline:
+- responder_turn MUST have TWO separate keys: "rebuttal" AND "argument". Both are required.
+  "rebuttal" = response to opener's attacks. "argument" = responder's own affirmative case.
+  Never combine them. Never omit "argument". Never rename either key.
+- Every script field must be a plain string. No nested objects inside script values.
+- All other key names must match the schema exactly as shown in the user prompt.
+"""
+
+SYSTEM_PROMPT = _SPORTS_SYSTEM_PROMPT if config.DEBATE_MODE == "sports" else _NEWS_SYSTEM_PROMPT
 
 USER_PROMPT_TEMPLATE = """
 Today is {today}. This week's date range: {start_date} through {end_date}.
@@ -58,8 +84,8 @@ Today is {today}. This week's date range: {start_date} through {end_date}.
 {topic_exclusion_block}
 
 The debate has these roles:
-  OPENER:    the {opener_side} debater — speaks first, argues IN FAVOR of the proposition
-  RESPONDER: the {responder_side} debater — speaks second, argues AGAINST the proposition
+  OPENER:    {opener_side_cap} — speaks first, argues IN FAVOR of the proposition
+  RESPONDER: {responder_side_cap} — speaks second, argues AGAINST the proposition
 
 Rebuttal strategy instructions for BOTH debaters when responding to the opponent's attacks:
 - {full_denial_pct}% of the time: flat denial — the accusation is factually wrong, here is why
@@ -97,8 +123,8 @@ inside responder_turn:
     "responder_turn": {{
       "voice_key": "{responder_side}",
       "label": "<{responder_side_cap} Perspective>",
-      "rebuttal": "<responder addresses the opener's specific attacks — {rebuttal_min} to {rebuttal_max} words. THIS KEY MUST BE NAMED 'rebuttal' EXACTLY.>",
-      "argument": "<responder's own affirmative case against the proposition — {argument_min} to {argument_max} words. THIS KEY MUST BE NAMED 'argument' EXACTLY.>"
+      "rebuttal": "<{rebuttal_min} to {rebuttal_max} words: responder addresses the opener's specific attacks>",
+      "argument": "<{argument_min} to {argument_max} words: responder's own affirmative case against the proposition — this is REQUIRED and separate from rebuttal>"
     }},
     "opener_rebuttal": {{
       "voice_key": "{opener_side}",
@@ -207,6 +233,9 @@ def load_prompt() -> str:
             f'  Proposition: "{proposition_override}"\n\n'
             f"Search the sources below for left-leaning and right-leaning coverage "
             f"of this specific topic to inform the debate arguments.\n\n"
+            f"REMINDER: The responder_turn object MUST contain BOTH 'rebuttal' AND 'argument' "
+            f"as separate keys. The rebuttal addresses the opener's attacks. The argument is "
+            f"the responder's own affirmative case against the proposition. Do not omit either.\n\n"
         )
     else:
         history               = load_topic_history()
@@ -214,6 +243,15 @@ def load_prompt() -> str:
         proposition_override_block = ""
         if history:
             print(f"Excluding {len(history)} recent topic(s) from selection.")
+
+    # In sports mode, use traditionalist/analytics as the visible labels
+    # but keep voice_key as left/right so TTS/video pipeline is unchanged
+    if config.DEBATE_MODE == "sports":
+        opener_label    = config.LEFT_LABEL  if opener_side == "left" else config.RIGHT_LABEL
+        responder_label = config.LEFT_LABEL  if responder_side == "left" else config.RIGHT_LABEL
+    else:
+        opener_label    = opener_side.capitalize()
+        responder_label = responder_side.capitalize()
 
     return USER_PROMPT_TEMPLATE.format(
         today          = end_date.strftime("%B %d, %Y"),
@@ -223,8 +261,8 @@ def load_prompt() -> str:
         right_sources  = ", ".join(config.RIGHT_SOURCES),
         opener_side    = opener_side,
         responder_side = responder_side,
-        opener_side_cap    = opener_side.capitalize(),
-        responder_side_cap = responder_side.capitalize(),
+        opener_side_cap    = opener_label,
+        responder_side_cap = responder_label,
         full_denial_pct     = full_denial_pct,
         concede_pivot_pct   = concede_pivot_pct,
         genuine_concede_pct = genuine_concede_pct,

@@ -9,10 +9,15 @@ Pipeline:
   5. Composite everything and write News.mp4
 """
 
+from importlib.resources import path
+
+from matplotlib.pyplot import stem
+
 from moviepy import (
-    AudioClip, AudioFileClip, ColorClip, CompositeVideoClip,
+    AudioClip, AudioFileClip, ColorClip, CompositeAudioClip, CompositeVideoClip,
     TextClip, VideoFileClip, concatenate_audioclips, vfx
 )
+from moviepy.audio.fx import MultiplyVolume, AudioFadeOut
 import numpy as np
 import config
 import json
@@ -100,6 +105,62 @@ def wrap_sources(sources_text, max_line_length=60):
     return "\n".join(lines)
 
 
+def make_lower_third(title: str, source: str, t_start: float, clips: list,
+                     duration: float | None = None) -> None:
+    """Broadcast-style lower third: title line + source subtext on a dark bar.
+
+    Composited as three layers: background bar, title text, source text.
+    All three share the same start time and duration.
+    Duration defaults to LOWER_THIRD_DURATION if not specified.
+    """
+    duration = duration if duration is not None else config.LOWER_THIRD_DURATION
+    y        = config.LOWER_THIRD_Y
+
+    # Measure title text width to size the background bar
+    title_clip = TextClip(
+        text=title,
+        font=config.FONT,
+        font_size=config.LOWER_THIRD_TITLE_STYLE["font_size"],
+        color=config.LOWER_THIRD_TITLE_STYLE["color"],
+    )
+    bar_w = min(title_clip.size[0] + config.OVERLAY_BG_PADDING * 4, 1800)
+    bar_h = 70  # fits two lines of text
+
+    bg = (
+        ColorClip(size=(bar_w, bar_h), color=config.LOWER_THIRD_BG_COLOR)
+        .with_opacity(config.LOWER_THIRD_BG_OPACITY)
+        .with_duration(duration)
+        .with_start(t_start)
+        .with_position((60, y))
+    )
+
+    title_txt = (
+        TextClip(
+            text=title,
+            font=config.FONT,
+            font_size=config.LOWER_THIRD_TITLE_STYLE["font_size"],
+            color=config.LOWER_THIRD_TITLE_STYLE["color"],
+        )
+        .with_duration(duration)
+        .with_start(t_start)
+        .with_position((80, y + 6))
+    )
+
+    source_txt = (
+        TextClip(
+            text=source,
+            font=config.FONT,
+            font_size=config.LOWER_THIRD_SOURCE_STYLE["font_size"],
+            color=config.LOWER_THIRD_SOURCE_STYLE["color"],
+        )
+        .with_duration(duration)
+        .with_start(t_start)
+        .with_position((80, y + 38))
+    )
+
+    clips.extend([bg, title_txt, source_txt])
+
+
 def generate_overlay_clips(timestamps, overlays, clips, time_offset=0.0):
     """Generate section and story overlay clips.
 
@@ -109,7 +170,7 @@ def generate_overlay_clips(timestamps, overlays, clips, time_offset=0.0):
     """
     last_section_end = 0
 
-    for item in overlays:
+    for idx, item in enumerate(overlays):
         kind = item[0]
 
         if kind == "section":
@@ -127,9 +188,10 @@ def generate_overlay_clips(timestamps, overlays, clips, time_offset=0.0):
             last_section_end = t + config.SECTION_STYLE["duration"]
             continue
 
-        # Story: item = ("story", display_title, spoken_title)
+        # Story: item = ("story", display_title, spoken_title, source_name)
         display_title = item[1]
         spoken_title  = item[2]
+        source_name   = item[3] if len(item) > 3 else ""
 
         # Use spoken title to find timestamp, display title for overlay text
         t = find_timestamp(spoken_title, timestamps)
@@ -140,23 +202,41 @@ def generate_overlay_clips(timestamps, overlays, clips, time_offset=0.0):
         t = t + time_offset - config.OVERLAY_ANTICIPATION
         phase1_start = max(t, last_section_end)
 
-        phase1 = make_text_clip(
+        # Phase1 — announcement card, styled to match chyron aesthetic
+        phase1_bg, phase1_txt = make_text_clip_with_bg(
             text=display_title,
-            font_size=config.STORY_STYLE1["font_size"],
-            color=config.STORY_STYLE1["color"],
+            font_size=config.LOWER_THIRD_TITLE_STYLE["font_size"] + 8,
+            color=config.LOWER_THIRD_TITLE_STYLE["color"],
             duration=config.STORY_STYLE1["duration"],
-            position=config.STORY_STYLE1["position"],
-        ).with_start(phase1_start)
-        clips.append(phase1)
+            position="center",
+        )
+        # Override bg color to match chyron
+        phase1_bg = (
+            ColorClip(
+                size=phase1_bg.size,
+                color=config.LOWER_THIRD_BG_COLOR,
+            )
+            .with_opacity(config.LOWER_THIRD_BG_OPACITY)
+            .with_duration(config.STORY_STYLE1["duration"])
+            .with_position("center")
+        )
+        clips.append(phase1_bg.with_start(phase1_start))
+        clips.append(phase1_txt.with_start(phase1_start))
 
-        phase2 = make_text_clip(
-            text=display_title,
-            font_size=config.STORY_STYLE2["font_size"],
-            color=config.STORY_STYLE2["color"],
-            duration=config.STORY_STYLE2["duration"],
-            position=config.STORY_STYLE2["position"],
-        ).with_start(phase1_start + config.STORY_STYLE1["duration"])
-        clips.append(phase2)
+        # Lower third chyron — lasts from after phase1 until the next story starts.
+        # Look ahead in overlays to find the next story timestamp.
+        if source_name:
+            chyron_start = phase1_start + config.STORY_STYLE1["duration"]
+            chyron_end   = None
+            for next_item in overlays[idx + 1:]:
+                if next_item[0] == "story":
+                    next_t = find_timestamp(next_item[2], timestamps)
+                    if next_t is not None:
+                        chyron_end = next_t + time_offset - config.OVERLAY_ANTICIPATION
+                    break
+
+            make_lower_third(display_title, source_name, chyron_start, clips,
+                             duration=config.LOWER_THIRD_DURATION)
 
 # ---------------------------------------------------------------------------
 # New functions for multi-clip architecture
@@ -196,8 +276,9 @@ def parse_overlays_from_json(data):
         for story in stories:
             display_title = story.get("title", "").strip()
             spoken_title  = to_sentence_case(display_title)
+            source_name   = story.get("source_name", "").strip()
             if display_title:
-                overlays.append(("story", display_title, spoken_title))
+                overlays.append(("story", display_title, spoken_title, source_name))
         result.append((stem, section_label, overlays))
     return result
 
@@ -263,18 +344,80 @@ def stitch_audio(clip_manifest = config.VIDEO_CLIP_MANIFEST, intro_silence=confi
         if not path.exists():
             print(f"  WARNING: {path} not found — skipping.")
             continue
+        
         ac = AudioFileClip(str(path))
+        
+        boost = config.VOICE_VOLUME_BOOST.get(stem)
+        if boost:
+            ac = ac.with_effects([MultiplyVolume(boost)])
+        
         start_times[stem] = cursor
         cursor += ac.duration + inter_clip_silence
         audio_clips.append(ac)
         audio_clips.append(make_silence(inter_clip_silence))
 
+
+    
     if not audio_clips:
         raise RuntimeError("No audio clips found in week folder.")
 
     # Prepend intro silence, then clips each followed by inter-clip silence
     combined = concatenate_audioclips([make_silence(intro_silence)] + audio_clips)
     return combined, start_times
+
+
+# ---------------------------------------------------------------------------
+# Music
+# ---------------------------------------------------------------------------
+
+def build_music_track(total_duration: float, narration_start: float) -> CompositeAudioClip | None:
+    """Mix intro sting + looping bed into a single audio track.
+
+    sting: plays once at t=0, full volume, fades out over MUSIC_STING_FADE_OUT seconds
+    bed:   loops under entire narration at low volume, starts at narration_start
+    Returns None if neither music file exists.
+    """
+    from pathlib import Path
+
+    sting_path = Path(config.MUSIC_STING_FILE)
+    bed_path   = Path(config.MUSIC_BED_FILE)
+
+    tracks = []
+
+    if sting_path.exists():
+        sting = (
+            AudioFileClip(str(sting_path))
+            .subclipped(0, config.MUSIC_STING_DURATION)
+            .with_effects([MultiplyVolume(config.MUSIC_STING_VOLUME)])
+            .with_effects([AudioFadeOut(config.MUSIC_STING_FADE_OUT)])
+            .with_start(0)
+        )
+        tracks.append(sting)
+        print(f"  Sting loaded: {sting_path.name} (trimmed to {config.MUSIC_STING_DURATION}s)")
+    else:
+        print(f"  WARNING: sting not found: {sting_path}")
+
+    if bed_path.exists():
+        bed_raw = AudioFileClip(str(bed_path))
+        # Loop the bed to cover from narration_start to end of video
+        bed_duration = total_duration - narration_start
+        loops_needed = int(bed_duration / bed_raw.duration) + 2
+        bed_looped = concatenate_audioclips([bed_raw] * loops_needed)
+        bed = (
+            bed_looped
+            .subclipped(0, bed_duration)
+            .with_start(narration_start)
+            .with_effects([MultiplyVolume(config.MUSIC_BED_VOLUME)])
+        )
+        tracks.append(bed)
+        print(f"  Bed loaded: {bed_path.name} ({bed_raw.duration:.1f}s loop, {bed_duration:.1f}s total)")
+    else:
+        print(f"  WARNING: bed not found: {bed_path}")
+
+    if not tracks:
+        return None
+
+    return CompositeAudioClip(tracks)
 
 
 # ---------------------------------------------------------------------------
@@ -356,10 +499,20 @@ def main():
     if outro_start is not None:
         build_sources_overlay(data, all_clips, outro_start, total_duration)
 
+    # --- Mix music with narration ---
+    print("Building music track...")
+    narration_start = start_times.get("00_intro", config.VIDEO_INTRO_SILENCE)
+    music = build_music_track(total_duration, narration_start)
+    if music is not None:
+        final_audio = CompositeAudioClip([audio, music])
+        final_audio = final_audio.with_duration(total_duration)
+    else:
+        final_audio = audio
+
     # --- Composite and write ---
     print("Compositing final video...")
     final = CompositeVideoClip(all_clips)
-    final = final.with_audio(audio)
+    final = final.with_audio(final_audio)
     final.write_videofile(config.OUTPUT_VIDEO, fps=24, audio_codec=config.AUDIO_CODEC)
     print(f"\nDone! Saved to {config.OUTPUT_VIDEO}")
 

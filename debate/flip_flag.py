@@ -11,8 +11,8 @@ from pathlib import Path
 from moviepy import VideoFileClip, vfx
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-INPUT  = PROJECT_ROOT / "stock_videos" / "OldGloryCrop.mp4"
-OUTPUT = PROJECT_ROOT / "stock_videos" / "OldGloryFlip.mp4"
+INPUT  = PROJECT_ROOT / "stock_videos" / "og5.mp4"
+OUTPUT = PROJECT_ROOT / "stock_videos" / "og5_left.mp4"
 
 if not INPUT.exists():
     raise FileNotFoundError(f"Input not found: {INPUT}")

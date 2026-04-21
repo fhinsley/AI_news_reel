@@ -9,13 +9,13 @@ PROJECT_ROOT = SCRIPT_DIR.parent
 def project_path(*parts):
     return str(PROJECT_ROOT.joinpath(*parts))
 
-# END_DATE = datetime.today() - timedelta(days=1)
 END_DATE = datetime.today() - timedelta(days=1)
+# END_DATE = datetime.today()
 START_DATE = END_DATE - timedelta(days=6)
 
 OPENING_TITLE = f"AI Newsreel Week of {START_DATE.strftime('%B %d')} through {END_DATE.strftime('%B %d, %Y')}"
 
-WEEK_FOLDER_NAME = END_DATE.strftime("%m%d%y_newsreel")
+WEEK_FOLDER_NAME = END_DATE.strftime("%m%d%y_Newsreel")
 WEEK_FOLDER = project_path(WEEK_FOLDER_NAME)
 WEEK_PHRASE = "This week:"
 
@@ -45,6 +45,15 @@ SECTION_STYLE = {"font_size": 72, "color": "white", "duration": 4,"position": "c
 # Story overlay phase behavior
 STORY_STYLE1 = {"font_size": 52, "color": "yellow", "duration": 4, "position": "center"}
 STORY_STYLE2 = {"font_size": 32, "color": "yellow", "duration": 5, "position": ("right", 950)}
+
+# Lower third chyron — story title + source attribution
+# Displayed as a broadcast-style lower third during each story
+LOWER_THIRD_TITLE_STYLE  = {"font_size": 28, "color": "white"}
+LOWER_THIRD_SOURCE_STYLE = {"font_size": 20, "color": "#aaddff"}  # light blue subtext
+LOWER_THIRD_BG_COLOR     = (0, 30, 80)      # dark navy bar
+LOWER_THIRD_BG_OPACITY   = 0.80
+LOWER_THIRD_Y            = 880              # vertical position (pixels from top, 1080p)
+LOWER_THIRD_DURATION     = 35.0             # seconds to display
 
 #GET API KEY FROM ENVIRONMENT VARIABLES
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
@@ -118,7 +127,14 @@ VIDEO_CLIP_MANIFEST = [
     ("99_outro",                        "outro"),
 ]
 
-VIDEO_INTRO_SILENCE     = 2.0   # seconds
+VOICE_VOLUME_BOOST = {
+    "01_core_tech_releases":            1.4,   # Kim
+    "02_directions_in_ai_architecture": 1.6,   # Ryan
+    "03_ai_for_productivity":           1.2,   # Marcos
+    "04_world_impact":                  1.2,   # Clara
+}
+
+VIDEO_INTRO_SILENCE     = 5.0   # seconds — pushed back to allow sting to breathe
 VIDEO_INTER_CLIP_SILENCE = 1.0  # seconds
 
 SRT_TARGET_WORDS = 6          # aim for this many words per caption line
@@ -147,6 +163,18 @@ EL_VOICE_TEST_SECTION4 = "MjDkeH2x9hCiWKXZtUPc"  # Marcos
 
 AUDIO_OFFSET = 2  # seconds of video before audio starts
 AUDIO_CODEC = "aac"
+
+# ---------------------------------------------------------------------------
+# Music bed
+# ---------------------------------------------------------------------------
+
+MUSIC_STING_FILE = project_path("music", "news", "breaking-news.mp3")
+MUSIC_BED_FILE   = project_path("music", "news", "independence-day.mp3")
+
+MUSIC_STING_VOLUME   = 1.0   # full volume for the intro sting
+MUSIC_STING_DURATION = 6.0   # trim sting to this many seconds
+MUSIC_STING_FADE_OUT = 2.0   # fade out over last N seconds of sting
+MUSIC_BED_VOLUME     = 0.06  # low ambient bed under narration
 
 #Input/Output Files
 EL_INPUT_FILE = project_path(WEEK_FOLDER_NAME, "News.txt")

@@ -1,6 +1,6 @@
 # ElevenLabsScript
 
-Two automated video pipelines: a weekly AI newsreel and a point-counterpoint political debate.
+Two automated video pipelines: a weekly AI newsreel and a point-counterpoint debate (news or sports).
 
 Both pipelines use Claude (Anthropic) to generate scripts from live web search, produce multi-voice narration via ElevenLabs, assemble a final video with background footage and timed text overlays, and publish to YouTube with closed captions.
 
@@ -45,7 +45,7 @@ Generates a weekly AI news video covering four thematic sections, narrated by fi
 2. **Trims stories** — Reduces each story body to a target length at a natural sentence boundary
 3. **Generates narration** — Produces six audio clips (intro, four section correspondents, outro) with per-character timestamp alignment via ElevenLabs
 4. **Silences artifacts** — Detects brief noise/click artifacts at SSML break-tag boundaries and uses FFmpeg to zero out those regions in-place
-5. **Assembles video** — Builds the full newsreel with section-specific background footage, overlay text timed to speech, and a sources list
+5. **Assembles video** — Builds the full newsreel with section-specific background footage, overlay text timed to speech, broadcast-style lower-third chyrons with source attribution, a music sting and ambient bed, and a sources list
 6. **Generates captions** — Produces a standard SRT file (`Captions.srt`) from the ElevenLabs character-level timestamps
 7. **Generates transcript** — Produces a formatted PDF (`Transcript.pdf`) with all stories organized by section, plus a clickable sources list
 8. **Uploads to YouTube** — Authenticates via OAuth, uploads `News.mp4` with metadata and tags, attaches the SRT caption track, adds the video to the newsreel playlist, and opens the published video in the browser
@@ -93,21 +93,34 @@ All knobs live in `newsreel/config.py`:
 - **Dates**: `END_DATE`, `START_DATE` (auto-computed; adjust offset as needed)
 - **Voices/model**: `EL_VOICE_*`, `EL_MODEL_ID`, `ANTHROPIC_MODEL`
 - **Timing**: `AUDIO_SPEED_FACTOR`, `AUDIO_OFFSET`, `OVERLAY_ANTICIPATION`
-- **Overlay style**: `OPENING_STYLE`, `SECTION_STYLE`, `STORY_STYLE1`, `STORY_STYLE2`
+- **Overlay style**: `OPENING_STYLE`, `SECTION_STYLE`, `STORY_STYLE1`, `LOWER_THIRD_*`
 - **Rundown layout**: `RUNDOWN_HEADER_STYLE`, `RUNDOWN_LINE_HEIGHT`, etc.
 - **Background videos**: `BG_VIDEOS` list, `SECTION_VIDEOS` dict
+- **Voice volume**: `VOICE_VOLUME_BOOST` dict — per-section dB boost to normalize loudness across voices
+- **Music**: `MUSIC_STING_FILE`, `MUSIC_BED_FILE`, `MUSIC_STING_VOLUME`, `MUSIC_BED_VOLUME`, `MUSIC_STING_DURATION`, `MUSIC_STING_FADE_OUT`
 
-Output folder is `MMDDYY/` (named from `END_DATE`), created automatically on first run.
+Output folder is `MMDDYYNewsreel/` (named from `END_DATE`), created automatically on first run.
+
+### Music
+
+Place MP3 files in `music/news/` (gitignored — not checked in):
+
+| Config key | Default filename | Role |
+|---|---|---|
+| `MUSIC_STING_FILE` | `breaking-news.mp3` | One-shot intro sting played at full volume, fades out over `MUSIC_STING_FADE_OUT` seconds |
+| `MUSIC_BED_FILE` | `independence-day.mp3` | Looping ambient bed played at low volume (`MUSIC_BED_VOLUME`) under the narration |
+
+The sting plays from `t=0`; the bed starts when narration begins. Both mix with the narration via `CompositeAudioClip`. If either file is missing the pipeline continues without it.
 
 ---
 
 ## Two-Sides Debate Pipeline
 
-Generates a point-counterpoint debate video on a current news topic, with a left debater, a right debater, and a neutral anchor. The debate topic is selected automatically from this week's news, sourced from a balanced mix of left- and right-leaning outlets.
+Generates a point-counterpoint debate video on a current news or sports topic, narrated by two debaters and a neutral anchor. The debate topic is selected automatically from this week's news; the mode (news or sports) is set in `debate/config.py`.
 
 ### What It Does
 
-1. **Generates the script** — Claude searches left- and right-leaning sources, selects a debatable proposition, and writes a structured five-segment debate as JSON (`story.json`)
+1. **Generates the script** — Claude searches mode-appropriate sources, selects a debatable proposition, and writes a structured five-segment debate as JSON (`story.json`)
 2. **Generates transcript** — Produces a formatted PDF (`DebateTranscriptMMDDYY.pdf`) of the full debate
 3. **Generates narration** — Synthesizes three audio clips (anchor intro, opener argument + rebuttal, responder turn, opener closing rebuttal, anchor outro) via ElevenLabs with per-character timestamps
 4. **Assembles video** — Builds the debate video with flag background footage tinted blue (left) or red (right), timed overlay text, and a framing card between speakers
@@ -130,11 +143,11 @@ Optional flags:
 
 | Step | Script | Input | Output |
 |------|--------|-------|--------|
-| 1 | `debate/script_generator.py` | live web search via Claude | `MMDDYY_debate/story.json` |
-| 2 | `debate/generate_transcript.py` | `story.json` | `MMDDYY_debate/DebateTranscriptMMDDYY.pdf` |
-| 3 | `debate/tts.py` | `story.json` | `MMDDYY_debate/00–04.mp3` + timestamp JSONs |
-| 4 | `debate/build_video.py` | clips + timestamps | `MMDDYY_debate/Debate.mp4` |
-| 5 | `debate/generate_srt.py` | timestamp JSONs | `MMDDYY_debate/Captions.srt` |
+| 1 | `debate/script_generator.py` | live web search via Claude | `MMDDYYNewsDebate/` or `MMDDYYSportsDebate/story.json` |
+| 2 | `debate/generate_transcript.py` | `story.json` | `…/DebateTranscriptMMDDYY.pdf` |
+| 3 | `debate/tts.py` | `story.json` | `…/00–04.mp3` + timestamp JSONs |
+| 4 | `debate/build_video.py` | clips + timestamps | `…/Debate.mp4` |
+| 5 | `debate/generate_srt.py` | timestamp JSONs | `…/Captions.srt` |
 | 6 | `debate/upload_youtube.py` | `Debate.mp4` + `Captions.srt` | published YouTube video (browser opens) |
 
 ### Debate Structure
@@ -159,28 +172,45 @@ Which side opens is chosen randomly each run and recorded in `story.json` so tha
 | Left debater | Kim | `EL_VOICE_LEFT` |
 | Right debater | Ryan | `EL_VOICE_RIGHT` |
 
+### Debate Mode
+
+Set `DEBATE_MODE` in `debate/config.py` before running:
+
+| Mode | `DEBATE_MODE` | Sides | Tone |
+|------|--------------|-------|------|
+| News | `"news"` | Left Perspective vs Right Perspective | Reasoned, Socratic; concede-and-pivot common |
+| Sports | `"sports"` | Traditionalist vs Analytics | Combative talk-radio; flat denial dominates |
+
+The mode controls the system prompt, source lists, side labels (used in overlays), rebuttal strategy weights, and the output folder name (`MMDDYYNewsDebate` or `MMDDYYSportsDebate`).
+
 ### Topic Selection
 
-Claude searches the following sources each run:
+Claude searches mode-appropriate sources each run:
 
+**News mode**
 - **Left-leaning**: CNN, MSNBC, NPR, The Atlantic, Washington Post
 - **Right-leaning**: Fox News, New York Post, Wall Street Journal, Breitbart, The Federalist
 
-A topic history file (`debate_topic_history.json`) tracks the last 14 days of debate topics so the same subject is not repeated. The history is pruned automatically; entries older than 14 days are dropped and the file is capped at 200 entries.
+**Sports mode**
+- **Traditionalist**: ESPN, CBS Sports, Sports Illustrated, Bleacher Report, Pro Football Talk
+- **Analytics**: The Athletic, FiveThirtyEight, Football Outsiders, Pro Football Reference, Stathead
+
+Each mode maintains its own topic history file (`debate_topic_history.json` for news, `sport_debate_topic_history.json` for sports) so histories don't cross-contaminate. Entries older than 14 days are pruned automatically; files are capped at 200 entries.
 
 ### Configuration
 
 All knobs live in `debate/config.py`:
 
+- **Mode**: `DEBATE_MODE` — `"news"` or `"sports"`
 - **Voices/model**: `EL_VOICE_ANCHOR`, `EL_VOICE_LEFT`, `EL_VOICE_RIGHT`, `ANTHROPIC_MODEL`
 - **Word count targets**: `OPENER_WORDS`, `REBUTTAL_WORDS`, `ARGUMENT_WORDS`, `CLOSING_REBUTTAL_WORDS`, `ANCHOR_INTRO_WORDS`, `ANCHOR_OUTRO_WORDS`
-- **Rebuttal strategy**: `REBUTTAL_STRATEGY` dict — weights for full denial, concede-and-pivot, and genuine concession (must sum to 1.0)
+- **Rebuttal strategy**: `REBUTTAL_STRATEGY` dict — auto-selected by mode; weights for full denial, concede-and-pivot, and genuine concession (must sum to 1.0)
 - **Overlay style**: `SIDE_LABEL_STYLE`, `ANCHOR_STYLE`, `HEADLINE_STYLE`, `PROPOSITION_STYLE`
 - **Background videos**: `LEFT_FLAG_VIDEO`, `RIGHT_FLAG_VIDEO`, `SECTION_VIDEOS`
 - **Flag tints**: `FLAG_TINTS` — per-side RGB color and opacity for the flag wash
 - **Topic history**: `TOPIC_EXCLUSION_DAYS`, `TOPIC_HISTORY_MAX`
 
-Output folder is `MMDDYY_debate/` (named from `END_DATE`), created automatically on first run.
+Output folder is `MMDDYYNewsDebate/` or `MMDDYYSportsDebate/` (named from `END_DATE` and mode), created automatically on first run.
 
 ---
 
@@ -220,8 +250,13 @@ utils/                      standalone utilities
 markdown/
   Weekly_Newsreel_Prompt.md  newsreel prompt template
 stock_videos/               background clips for both pipelines
-MMDDYY/                     newsreel weekly output (auto-created)
-MMDDYY_debate/              debate weekly output (auto-created)
+music/
+  news/                     news music files (mp3s gitignored — add your own)
+    breaking-news.mp3       intro sting (configure via MUSIC_STING_FILE)
+    independence-day.mp3    ambient bed (configure via MUSIC_BED_FILE)
+MMDDYYNewsreel/             newsreel weekly output (auto-created)
+MMDDYYNewsDebate/           news debate weekly output (auto-created)
+MMDDYYSportsDebate/         sports debate weekly output (auto-created)
 ```
 
 ---

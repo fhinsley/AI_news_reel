@@ -9,6 +9,8 @@ import random
 from pathlib import Path
 from datetime import datetime, timedelta
 
+
+
 # ---------------------------------------------------------------------------
 # Proposition override
 #
@@ -17,6 +19,60 @@ from datetime import datetime, timedelta
 # ---------------------------------------------------------------------------
 
 DEBATE_PROPOSITION = ""
+
+
+# ---------------------------------------------------------------------------
+# Debate mode
+#
+# "news"   — left/right ideological debate on current events
+# "sports" — traditionalist/analytics debate on sports topics
+# ---------------------------------------------------------------------------
+
+#DEBATE_MODE = "news"
+DEBATE_MODE = "sports"
+
+# ---------------------------------------------------------------------------
+# Sources — selected by mode
+# ---------------------------------------------------------------------------
+
+_NEWS_LEFT_SOURCES  = ["CNN", "MSNBC", "NPR", "The Atlantic", "Washington Post"]
+_NEWS_RIGHT_SOURCES = ["Fox News", "New York Post", "Wall Street Journal", "Breitbart", "The Federalist"]
+
+_SPORTS_TRAD_SOURCES      = ["ESPN", "CBS Sports", "Sports Illustrated", "Bleacher Report", "Pro Football Talk"]
+_SPORTS_ANALYTICS_SOURCES = ["The Athletic", "FiveThirtyEight", "Football Outsiders", "Pro Football Reference", "Stathead"]
+
+
+# News mode: reasoned, Socratic — concede-and-pivot dominates
+_NEWS_REBUTTAL_STRATEGY = {
+    "full_denial_weight":       0.35,
+    "concede_pivot_weight":     0.45,
+    "genuine_concede_weight":   0.20,
+}
+
+# Sports mode: combative, talk-radio — flat denial dominates, almost no concession
+_SPORTS_REBUTTAL_STRATEGY = {
+    "full_denial_weight":       0.60,
+    "concede_pivot_weight":     0.30,
+    "genuine_concede_weight":   0.10,
+}
+
+# ---------------------------------------------------------------------------
+# Side labels — used in the prompt and video overlays
+# ---------------------------------------------------------------------------
+
+if DEBATE_MODE == "sports":
+    LEFT_SOURCES  = _SPORTS_TRAD_SOURCES
+    LEFT_LABEL  = "Traditionalist"
+    RIGHT_SOURCES = _SPORTS_ANALYTICS_SOURCES
+    RIGHT_LABEL = "Analytics"
+    REBUTTAL_STRATEGY = _SPORTS_REBUTTAL_STRATEGY
+
+else:
+    LEFT_SOURCES  = _NEWS_LEFT_SOURCES
+    LEFT_LABEL  = "Left Perspective"
+    RIGHT_SOURCES = _NEWS_RIGHT_SOURCES
+    RIGHT_LABEL = "Right Perspective"
+    REBUTTAL_STRATEGY = _NEWS_REBUTTAL_STRATEGY
 
 # ---------------------------------------------------------------------------
 # Paths — same anchor pattern as config.py
@@ -33,9 +89,11 @@ def project_path(*parts):
 # ---------------------------------------------------------------------------
 
 END_DATE   = datetime.today() - timedelta(days=1)
+# END_DATE   = datetime.today()
 START_DATE = END_DATE - timedelta(days=6)
 
-WEEK_FOLDER_NAME = END_DATE.strftime("%m%d%y_debate")
+
+WEEK_FOLDER_NAME = END_DATE.strftime(f"%m%d%y_{DEBATE_MODE.capitalize()}Debate")
 WEEK_FOLDER      = project_path(WEEK_FOLDER_NAME)
 
 # ---------------------------------------------------------------------------
@@ -72,12 +130,6 @@ EL_VOICE_ANCHOR = "FLpz0UhC9a7CIfUSBo6S"   # Clancy — neutral anchor
 EL_VOICE_LEFT   = "O7LV5fxosQChiBE7l6Wz"   # Kim    — left debater
 EL_VOICE_RIGHT  = "ya031zGCAxyRGrvB3or9"   # Ryan   — right debater
 
-# ---------------------------------------------------------------------------
-# News sources passed into the Claude prompt
-# ---------------------------------------------------------------------------
-
-LEFT_SOURCES  = ["CNN", "MSNBC", "NPR", "The Atlantic", "Washington Post"]
-RIGHT_SOURCES = ["Fox News", "New York Post", "Wall Street Journal", "Breitbart", "The Federalist"]
 
 # ---------------------------------------------------------------------------
 # Debate structure parameters
@@ -136,11 +188,7 @@ ANCHOR_OUTRO_WORDS     = (30,   50)
 # High genuine_concede → unusually magnanimous; use sparingly for realism
 # ---------------------------------------------------------------------------
 
-REBUTTAL_STRATEGY = {
-    "full_denial_weight":       0.35,
-    "concede_pivot_weight":     0.45,
-    "genuine_concede_weight":   0.20,
-}
+
 
 # Validate at import time so misconfiguration fails loudly
 _weight_sum = sum(REBUTTAL_STRATEGY.values())
@@ -239,7 +287,15 @@ OUTPUT_VIDEO = project_path(WEEK_FOLDER_NAME, "Debate.mp4")
 # ---------------------------------------------------------------------------
 
 # Stored at project root so it persists across all weekly folders and runs.
-TOPIC_HISTORY_FILE = PROJECT_ROOT / "debate_topic_history.json"
+if DEBATE_MODE == "sports":
+	TOPIC_HISTORY_FILE = PROJECT_ROOT / "sport_debate_topic_history.json"
+else:
+	TOPIC_HISTORY_FILE = PROJECT_ROOT / "debate_topic_history.json"
+
+
+
+
+
 
 # How many days back to look when excluding recent topics.
 # At 2-3 runs/day this covers ~42-63 debates — plenty of breathing room.

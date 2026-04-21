@@ -28,7 +28,7 @@ def main() -> int:
         run_step("silence_artifacts.py")
         run_step("build_video.py")
         run_step("generate_srt.py")
-        run_step("upload_youtube.py")
+    #    run_step("upload_youtube.py")
     except subprocess.CalledProcessError as exc:
         print(f"\nPipeline failed with exit code {exc.returncode}")
         return exc.returncode
