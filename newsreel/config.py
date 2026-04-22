@@ -42,9 +42,6 @@ OPENING_STYLE = {"font_size": 80, "color": "white", "duration": 5, "position": "
 # Text overlay styles
 SECTION_STYLE = {"font_size": 72, "color": "white", "duration": 4,"position": "center"}
 
-# Story overlay phase behavior
-STORY_STYLE1 = {"font_size": 52, "color": "yellow", "duration": 4, "position": "center"}
-STORY_STYLE2 = {"font_size": 32, "color": "yellow", "duration": 5, "position": ("right", 950)}
 
 # Lower third chyron — story title + source attribution
 # Displayed as a broadcast-style lower third during each story
@@ -73,21 +70,13 @@ ANTHROPIC_SHORT_JSON_FILE = Path(project_path(WEEK_FOLDER_NAME, "shortstories.js
 ANTHROPIC_MODEL = "claude-sonnet-4-6"
 ANTHROPIC_MAX_TOKENS = 4096
 
-#Build Video config
-SECTION_HEADERS = [
-    "Core Tech Releases",
-    "Directions in AI Architecture",
-    "AI For Productivity",
-    "World Impact",
-]
-
 SECTION_VIDEOS = {
-    "intro":                            project_path("stock_videos", "bookend.mp4"),
-    "Core Tech Releases":               project_path("stock_videos", "windydesertriver.mp4"),
-    "Directions in AI Architecture":    project_path("stock_videos", "narrowmtnpath.mp4"),
-    "AI For Productivity":              project_path("stock_videos", "cityroadbay.mp4"),
-    "World Impact":                     project_path("stock_videos", "grandcanyonriver.mp4"),
-    "outro":                            project_path("stock_videos", "bookend.mp4"),
+    "intro":                            project_path("stock_videos", "bookend.mov"),
+    "Core Tech Releases":               project_path("stock_videos", "coretech.mp4"),
+    "Directions in AI Architecture":    project_path("stock_videos", "AIdirections.mp4"),
+    "AI For Productivity":              project_path("stock_videos", "AIproductivity.mp4"),
+    "World Impact":                     project_path("stock_videos", "worldimpact.mp4"),
+    "outro":                            project_path("stock_videos", "bookend.mov"),
 }
 
 OUTRO_PHRASE = "That is your weekly summary"
@@ -95,16 +84,11 @@ OUTRO_PHRASE = "That is your weekly summary"
 SOURCE_PHRASE = "Sources this week:"
 
 BG_VIDEOS = [
-    project_path("stock_videos", "vecteezy_02.mp4"),
     project_path("stock_videos", "vecteezy_03.mp4"),
     project_path("stock_videos", "vecteezy_05.mp4"),
     project_path("stock_videos", "vecteezy_06.mp4"),
     project_path("stock_videos", "vecteezy_04.mp4"),
-    project_path("stock_videos", "vecteezy_09.mp4"),
-    project_path("stock_videos", "diskdrives.mp4"),
     project_path("stock_videos", "vecteezy_10.mp4"),
-    project_path("stock_videos", "vecteezy_12.mp4"),
-    project_path("stock_videos", "vecteezy_13.mov"),
     project_path("stock_videos", "vecteezy_14.mov"),
     project_path("stock_videos", "vecteezy_15.mp4"),
     project_path("stock_videos", "vecteezy_16.mov"),
@@ -129,7 +113,7 @@ VIDEO_CLIP_MANIFEST = [
 
 VOICE_VOLUME_BOOST = {
     "01_core_tech_releases":            1.4,   # Kim
-    "02_directions_in_ai_architecture": 1.6,   # Ryan
+    "02_directions_in_ai_architecture": 3,   # Ryan
     "03_ai_for_productivity":           1.2,   # Marcos
     "04_world_impact":                  1.2,   # Clara
 }
@@ -137,8 +121,8 @@ VOICE_VOLUME_BOOST = {
 VIDEO_INTRO_SILENCE     = 5.0   # seconds — pushed back to allow sting to breathe
 VIDEO_INTER_CLIP_SILENCE = 1.0  # seconds
 
-SRT_TARGET_WORDS = 6          # aim for this many words per caption line
-SRT_MAX_DURATION = 3.0        # never let a caption run longer than this (seconds)
+SRT_TARGET_WORDS = 10         # aim for this many words per caption line
+SRT_MAX_DURATION = 5.0        # never let a caption run longer than this (seconds)
 SRT_MIN_DURATION = 0.5        # never shorter than this
 SRT_OUTPUT_FILE = Path(project_path(WEEK_FOLDER_NAME, "Captions.srt"))
 
@@ -168,19 +152,22 @@ AUDIO_CODEC = "aac"
 # Music bed
 # ---------------------------------------------------------------------------
 
-MUSIC_STING_FILE = project_path("music", "news", "breaking-news.mp3")
-MUSIC_BED_FILE   = project_path("music", "news", "independence-day.mp3")
+MUSIC_STING_FILE = project_path("music", "news", "breaking-news2.mp3")
 
 MUSIC_STING_VOLUME   = 1.0   # full volume for the intro sting
-MUSIC_STING_DURATION = 6.0   # trim sting to this many seconds
+MUSIC_STING_DURATION = 8.0   # trim sting to this many seconds
 MUSIC_STING_FADE_OUT = 2.0   # fade out over last N seconds of sting
-MUSIC_BED_VOLUME     = 0.06  # low ambient bed under narration
+MUSIC_BED_VOLUME     = 0.5 # low ambient bed under narration
+MUSIC_OUTRO_VOLUME   = 0.2 # low ambient bed under narration
 
-#Input/Output Files
-EL_INPUT_FILE = project_path(WEEK_FOLDER_NAME, "News.txt")
-EL_OUTPUT_FILE = project_path(WEEK_FOLDER_NAME, "News.mp3")
-EL_DELAY_FILE = project_path(WEEK_FOLDER_NAME, "News_delayed.mp3")
-TIMESTAMP_FILE = project_path(WEEK_FOLDER_NAME, "NewsTimeStamps.json")
+MUSIC_SEGMENTS = {
+    "01_core_tech_releases":            { "file": project_path("music", "news", "section1.mp3"), "volume": 0.50  },
+    "02_directions_in_ai_architecture": { "file": project_path("music", "news", "section2.mp3"), "volume": 0.03 },
+    "03_ai_for_productivity":           { "file": project_path("music", "news", "section3.mp3"), "volume": 0.10 },
+    "04_world_impact":                  { "file": project_path("music", "news", "section4.mp3"), "volume": 0.10 },
+}
+
+#Output File
 OUTPUT_VIDEO = project_path(WEEK_FOLDER_NAME, "News.mp4")
 
 AUDIO_SPEED_FACTOR = 0.9

@@ -17,7 +17,7 @@ from moviepy import (
     AudioClip, AudioFileClip, ColorClip, CompositeAudioClip, CompositeVideoClip,
     TextClip, VideoFileClip, concatenate_audioclips, vfx
 )
-from moviepy.audio.fx import MultiplyVolume, AudioFadeOut
+from moviepy.audio.fx import MultiplyVolume, AudioFadeOut, AudioFadeIn
 import numpy as np
 import config
 import json
@@ -207,7 +207,7 @@ def generate_overlay_clips(timestamps, overlays, clips, time_offset=0.0):
             text=display_title,
             font_size=config.LOWER_THIRD_TITLE_STYLE["font_size"] + 8,
             color=config.LOWER_THIRD_TITLE_STYLE["color"],
-            duration=config.STORY_STYLE1["duration"],
+            duration=config.SECTION_STYLE["duration"],
             position="center",
         )
         # Override bg color to match chyron
@@ -217,7 +217,7 @@ def generate_overlay_clips(timestamps, overlays, clips, time_offset=0.0):
                 color=config.LOWER_THIRD_BG_COLOR,
             )
             .with_opacity(config.LOWER_THIRD_BG_OPACITY)
-            .with_duration(config.STORY_STYLE1["duration"])
+            .with_duration(config.SECTION_STYLE["duration"])
             .with_position("center")
         )
         clips.append(phase1_bg.with_start(phase1_start))
@@ -226,7 +226,7 @@ def generate_overlay_clips(timestamps, overlays, clips, time_offset=0.0):
         # Lower third chyron — lasts from after phase1 until the next story starts.
         # Look ahead in overlays to find the next story timestamp.
         if source_name:
-            chyron_start = phase1_start + config.STORY_STYLE1["duration"]
+            chyron_start = phase1_start + config.SECTION_STYLE["duration"]
             chyron_end   = None
             for next_item in overlays[idx + 1:]:
                 if next_item[0] == "story":
@@ -300,23 +300,38 @@ def build_sources_overlay(data, clips, outro_start, total_duration):
     sources_str = ", ".join(source_names)
     duration = total_duration - outro_start
 
-    header = make_text_clip(
+    # Header and body with dark background matching chyron style
+    hdr_bg, hdr_txt = make_text_clip_with_bg(
         "Sources",
         config.SECTION_STYLE["font_size"],
         config.SECTION_STYLE["color"],
         duration,
         ("center", 400),
-    ).with_start(outro_start)
-    clips.append(header)
+    )
+    hdr_bg = (
+        ColorClip(size=hdr_bg.size, color=config.LOWER_THIRD_BG_COLOR)
+        .with_opacity(config.LOWER_THIRD_BG_OPACITY)
+        .with_duration(duration)
+        .with_position(("center", 400))
+    )
+    clips.append(hdr_bg.with_start(outro_start))
+    clips.append(hdr_txt.with_start(outro_start))
 
-    body = make_text_clip(
+    body_bg, body_txt = make_text_clip_with_bg(
         wrap_sources(sources_str),
         config.RUNDOWN_STYLE["font_size"],
         config.RUNDOWN_STYLE["color"],
         duration,
         ("center", 480),
-    ).with_start(outro_start)
-    clips.append(body)
+    )
+    body_bg = (
+        ColorClip(size=body_bg.size, color=config.LOWER_THIRD_BG_COLOR)
+        .with_opacity(config.LOWER_THIRD_BG_OPACITY)
+        .with_duration(duration)
+        .with_position(("center", 480))
+    )
+    clips.append(body_bg.with_start(outro_start))
+    clips.append(body_txt.with_start(outro_start))
 
 
 def make_silence(duration: float):
@@ -370,49 +385,117 @@ def stitch_audio(clip_manifest = config.VIDEO_CLIP_MANIFEST, intro_silence=confi
 # Music
 # ---------------------------------------------------------------------------
 
-def build_music_track(total_duration: float, narration_start: float) -> CompositeAudioClip | None:
-    """Mix intro sting + looping bed into a single audio track.
-
-    sting: plays once at t=0, full volume, fades out over MUSIC_STING_FADE_OUT seconds
-    bed:   loops under entire narration at low volume, starts at narration_start
-    Returns None if neither music file exists.
+def _make_bed_segment(bed_raw: "AudioFileClip", t_start: float, duration: float, volume: float) -> "AudioFileClip":
+    """Return a bed clip of exactly `duration` seconds placed at t_start.
+    Loops the source if needed, trims to fit.
     """
-    from pathlib import Path
+    loops_needed = int(duration / bed_raw.duration) + 2
+    looped = concatenate_audioclips([bed_raw] * loops_needed)
+    return (
+        looped
+        .subclipped(0, duration)
+        .with_start(t_start)
+        .with_effects([MultiplyVolume(volume)])
+    )
 
+
+def build_music_track(total_duration: float, narration_start: float,
+                      start_times: dict, outro_start: float | None,
+                      clip_sections: list) -> "CompositeAudioClip | None":
+    """Build the full music track:
+
+    - Sting: t=0 full volume, ducks to bed volume as anchor intro starts,
+             plays through anchor intro then stops.
+    - Bed:   plays during each section and its stories, stops between clips,
+             restarts at each new section clip start.
+    - Outro sting: plays from outro_start to end at bed volume.
+    """
     sting_path = Path(config.MUSIC_STING_FILE)
-    bed_path   = Path(config.MUSIC_BED_FILE)
+    tracks     = []
 
-    tracks = []
-
+    # --- Sting: intro ---
     if sting_path.exists():
-        sting = (
-            AudioFileClip(str(sting_path))
-            .subclipped(0, config.MUSIC_STING_DURATION)
-            .with_effects([MultiplyVolume(config.MUSIC_STING_VOLUME)])
-            .with_effects([AudioFadeOut(config.MUSIC_STING_FADE_OUT)])
-            .with_start(0)
-        )
-        tracks.append(sting)
-        print(f"  Sting loaded: {sting_path.name} (trimmed to {config.MUSIC_STING_DURATION}s)")
+        intro_clip_start = start_times.get("00_intro", narration_start)
+        # Sting plays from t=0 at full volume, then ducks at intro start,
+        # fades out by end of intro clip duration
+        sting_raw = AudioFileClip(str(sting_path))
+        sting_dur = config.MUSIC_STING_DURATION
+
+        # Full-volume portion: t=0 to narration_start
+        if narration_start > 0:
+            sting_loud = (
+                sting_raw
+                .subclipped(0, min(narration_start, sting_raw.duration))
+                .with_effects([MultiplyVolume(config.MUSIC_STING_VOLUME)])
+                .with_start(0)
+            )
+            tracks.append(sting_loud)
+
+        # Ducked portion: narration_start to sting_dur, fades out
+        duck_start = narration_start
+        duck_end   = min(sting_dur, sting_raw.duration)
+        if duck_end > duck_start:
+            sting_duck = (
+                sting_raw
+                .subclipped(duck_start, duck_end)
+                .with_effects([MultiplyVolume(config.MUSIC_BED_VOLUME)])
+                .with_effects([AudioFadeOut(config.MUSIC_STING_FADE_OUT)])
+                .with_start(duck_start)
+            )
+            tracks.append(sting_duck)
+        print(f"  Sting (intro): {sting_path.name} (full to {narration_start:.1f}s, ducked to {duck_end:.1f}s)")
     else:
         print(f"  WARNING: sting not found: {sting_path}")
 
-    if bed_path.exists():
+    # --- Bed: one segment per section clip, each with its own music file ---
+    # section_stems preserves manifest order for correct duration calculation
+    section_stems = [
+        stem for stem, label, _ in clip_sections
+        if label not in ("intro", "outro")
+    ]
+    for i, stem in enumerate(section_stems):
+        seg_cfg = config.MUSIC_SEGMENTS.get(stem)
+        bed_volume = seg_cfg.get("volume") if seg_cfg else config.MUSIC_BED_VOLUME
+        bed_file = seg_cfg.get("file") if seg_cfg else None
+        if not bed_file:
+            print(f"  WARNING: no bed file configured for {stem} — skipping.")
+            continue
+        bed_path = Path(bed_file)
+        if not bed_path.exists():
+            print(f"  WARNING: bed not found for {stem}: {bed_path}")
+            continue
+
+        t_start = start_times.get(stem)
+        if t_start is None:
+            continue
+
+        # Duration: this stem start to next stem start (or outro/end)
+        if i + 1 < len(section_stems):
+            t_end = start_times.get(section_stems[i + 1], total_duration)
+        else:
+            t_end = outro_start if outro_start is not None else total_duration
+
+        duration = t_end - t_start
+        if duration <= 0:
+            continue
+
         bed_raw = AudioFileClip(str(bed_path))
-        # Loop the bed to cover from narration_start to end of video
-        bed_duration = total_duration - narration_start
-        loops_needed = int(bed_duration / bed_raw.duration) + 2
-        bed_looped = concatenate_audioclips([bed_raw] * loops_needed)
-        bed = (
-            bed_looped
-            .subclipped(0, bed_duration)
-            .with_start(narration_start)
-            .with_effects([MultiplyVolume(config.MUSIC_BED_VOLUME)])
+        seg = _make_bed_segment(bed_raw, t_start, duration, volume=bed_volume)
+        tracks.append(seg)
+        print(f"  Bed segment: {stem} ({bed_path.name}) {t_start:.1f}s → {t_end:.1f}s ({duration:.1f}s)")
+
+    # --- Sting: outro ---
+    if sting_path.exists() and outro_start is not None:
+        outro_dur = total_duration - outro_start
+        sting_outro = (
+            AudioFileClip(str(sting_path))
+            .subclipped(0, min(outro_dur, AudioFileClip(str(sting_path)).duration))
+            .with_effects([MultiplyVolume(config.MUSIC_OUTRO_VOLUME)])
+            .with_effects([AudioFadeIn(1.0)])
+            .with_start(outro_start)
         )
-        tracks.append(bed)
-        print(f"  Bed loaded: {bed_path.name} ({bed_raw.duration:.1f}s loop, {bed_duration:.1f}s total)")
-    else:
-        print(f"  WARNING: bed not found: {bed_path}")
+        tracks.append(sting_outro)
+        print(f"  Sting (outro): starts at {outro_start:.1f}s")
 
     if not tracks:
         return None
@@ -484,16 +567,27 @@ def main():
         section_map=config.SECTION_VIDEOS,
     )
 
-    # --- Opening title card ---
-    opening = make_text_clip(
+    # --- Opening title card — dark background matching chyron style ---
+    opening_bg, opening_txt = make_text_clip_with_bg(
         text=config.OPENING_TITLE,
         font_size=config.OPENING_STYLE["font_size"],
         color=config.OPENING_STYLE["color"],
         duration=config.OPENING_STYLE["duration"],
         position=config.OPENING_STYLE["position"],
-    ).with_start(0)
+    )
+    opening_bg = (
+        ColorClip(
+            size=opening_bg.size,
+            color=config.LOWER_THIRD_BG_COLOR,
+        )
+        .with_opacity(config.LOWER_THIRD_BG_OPACITY)
+        .with_duration(config.OPENING_STYLE["duration"])
+        .with_position(config.OPENING_STYLE["position"])
+    )
+    opening_bg  = opening_bg.with_start(0)
+    opening_txt = opening_txt.with_start(0)
 
-    all_clips = background_clips + [opening] + clips
+    all_clips = background_clips + [opening_bg, opening_txt] + clips
 
     # --- Sources overlay during outro ---
     if outro_start is not None:
@@ -502,7 +596,13 @@ def main():
     # --- Mix music with narration ---
     print("Building music track...")
     narration_start = start_times.get("00_intro", config.VIDEO_INTRO_SILENCE)
-    music = build_music_track(total_duration, narration_start)
+    music = build_music_track(
+        total_duration  = total_duration,
+        narration_start = narration_start,
+        start_times     = start_times,
+        outro_start     = outro_start,
+        clip_sections   = clip_sections,
+    )
     if music is not None:
         final_audio = CompositeAudioClip([audio, music])
         final_audio = final_audio.with_duration(total_duration)
