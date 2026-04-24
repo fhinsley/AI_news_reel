@@ -16,6 +16,8 @@ SOURCES:
 OUTPUT FORMAT:
 Respond with a single valid JSON object. No preamble, no explanation, no markdown fences. Just the JSON.
 
+[EXCLUSION_BLOCK]
+
 Schema:
 
 {
@@ -26,7 +28,7 @@ Schema:
       "stories": [
         {
           "title": "Story title under 60 characters, no period",
-          "body": "Story text, 300 to 500 characters",
+          "body": "Story text, 350 to 550 characters",
           "source_name": "Publication name",
           "source_url": "https://..."
         }
@@ -58,9 +60,9 @@ STORY COUNT:
 - Drop a story slot rather than padding with a weak story.
 
 BODY LENGTH:
-- Each body must be 300 to 500 characters.
-- Count carefully. Do not go under 300 or over 500.
-- That is roughly 50 to 80 words of tight broadcast copy.
+- Each body must be 350 to 550 characters.
+- Count carefully. Do not go under 350 or over 550.
+- That is roughly 60 to 90 words of tight broadcast copy.
 - Lead with the most newsworthy fact. Additional context in order of importance.
 
 BODY STYLE:

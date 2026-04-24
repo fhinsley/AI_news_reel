@@ -44,11 +44,12 @@ Generates a weekly AI news video covering four thematic sections, narrated by fi
 1. **Generates the script** — Sends a prompt to Claude with web search enabled; Claude fetches current AI news and returns structured JSON stories organized into four sections
 2. **Trims stories** — Reduces each story body to a target length at a natural sentence boundary
 3. **Generates narration** — Produces six audio clips (intro, four section correspondents, outro) with per-character timestamp alignment via ElevenLabs
-4. **Silences artifacts** — Detects brief noise/click artifacts at SSML break-tag boundaries and uses FFmpeg to zero out those regions in-place
-5. **Assembles video** — Builds the full newsreel with section-specific background footage, overlay text timed to speech, broadcast-style lower-third chyrons with source attribution, a music sting and ambient bed, and a sources list
-6. **Generates captions** — Produces a standard SRT file (`Captions.srt`) from the ElevenLabs character-level timestamps
-7. **Generates transcript** — Produces a formatted PDF (`Transcript.pdf`) with all stories organized by section, plus a clickable sources list
-8. **Uploads to YouTube** — Authenticates via OAuth, uploads `News.mp4` with metadata and tags, attaches the SRT caption track, adds the video to the newsreel playlist, and opens the published video in the browser
+4. **Optional speed-up pass** — `utils/stretch_audio.py` can time-stretch generated narration clips if you want faster delivery for specific sections
+5. **Silences artifacts** — Detects brief noise/click artifacts at SSML break-tag boundaries and uses FFmpeg to zero out those regions in-place
+6. **Assembles video** — Builds the full newsreel with section-specific background footage, overlay text timed to speech, broadcast-style lower-third chyrons with source attribution, a music sting and ambient bed, and a sources list
+7. **Generates captions** — Produces a standard SRT file (`Captions.srt`) from the ElevenLabs character-level timestamps
+8. **Generates transcript** — Produces a formatted PDF (`Transcript.pdf`) with all stories organized by section, plus a clickable sources list
+9. **Uploads to YouTube (optional)** — Authenticates via OAuth, uploads `News.mp4` with metadata and tags, attaches the SRT caption track, adds the video to the newsreel playlist, and opens the published video in the browser
 
 ### Run
 
@@ -59,13 +60,13 @@ python run_newsreel.py
 | Step | Script | Input | Output |
 |------|--------|-------|--------|
 | 1 | `newsreel/script_generator.py` | `markdown/Weekly_Newsreel_Prompt.md` | `MMDDYY/stories.json` |
-| 2 | `newsreel/trim_stories.py` | `MMDDYY/stories.json` | `MMDDYY/shortstories.json` |
-| 3 | `newsreel/newsreel_tts.py` | `MMDDYY/shortstories.json` | `MMDDYY/00_intro.mp3` … `99_outro.mp3` + timestamp JSONs |
+| 2 | `newsreel/newsreel_tts.py` | `MMDDYY/stories.json` | `MMDDYY/00_intro.mp3` … `99_outro.mp3` + timestamp JSONs |
+| 3 | `utils/stretch_audio.py` (optional) | clip mp3s | time-stretched clip mp3s (in-place) |
 | 4 | `newsreel/silence_artifacts.py` | clip mp3s + timestamp JSONs | mp3s cleaned in-place |
 | 5 | `newsreel/build_video.py` | clips + timestamps | `MMDDYY/News.mp4` |
 | 6 | `newsreel/generate_srt.py` | timestamp JSONs | `MMDDYY/Captions.srt` |
-| 7 | `newsreel/generate_transcript.py` | `MMDDYY/shortstories.json` | `MMDDYY/Transcript.pdf` |
-| 8 | `newsreel/upload_youtube.py` | `News.mp4` + `Captions.srt` | published YouTube video (browser opens) |
+| 7 | `newsreel/generate_transcript.py` | `MMDDYY/stories.json` | `MMDDYY/Transcript.pdf` |
+| 8 | `newsreel/upload_youtube.py` (optional) | `News.mp4` + `Captions.srt` | published YouTube video |
 
 ### Voices
 
@@ -223,7 +224,6 @@ requirements.txt            Python dependencies
 newsreel/                   newsreel pipeline scripts
   config.py
   script_generator.py
-  trim_stories.py
   newsreel_tts.py
   silence_artifacts.py
   build_video.py
@@ -243,9 +243,9 @@ debate/                     debate pipeline scripts
   flip_flag.py
   generate_flag_assets.py
 utils/                      standalone utilities
+  stretch_audio.py
   test_tts_before_11labs.py
   viewscript.py
-  extract_entities.py
   video_test.py
 markdown/
   Weekly_Newsreel_Prompt.md  newsreel prompt template

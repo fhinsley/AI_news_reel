@@ -26,6 +26,7 @@ old_*/
 
 # Environment / secrets
 .env
+client_secrets.json
 scripts/client_secrets.json
 scripts/youtube_token.pickle
 *.pickle

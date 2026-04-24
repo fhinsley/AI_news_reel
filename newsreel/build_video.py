@@ -244,7 +244,8 @@ def generate_overlay_clips(timestamps, overlays, clips, time_offset=0.0):
 
 def load_stories_json():
     """Load stories.json and return the parsed dict."""
-    stories_file = config.ANTHROPIC_SHORT_JSON_FILE
+    # stories_file = config.ANTHROPIC_SHORT_JSON_FILE
+    stories_file = config.ANTHROPIC_JSON_FILE
     with open(stories_file, "r") as f:
         return json.load(f)
 

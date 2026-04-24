@@ -25,23 +25,83 @@ PROMPT_FILE = Path(config.PROJECT_ROOT) / "markdown" / "Weekly_Newsreel_Prompt.m
 OUTPUT_FILE = Path(config.WEEK_FOLDER) / "stories.json"
 
 def load_prompt() -> str:
-    """Read the prompt template and interpolate the current date range."""
     if not PROMPT_FILE.exists():
         raise FileNotFoundError(f"Prompt file not found: {PROMPT_FILE}")
 
     template = PROMPT_FILE.read_text(encoding="utf-8")
 
-    # Mirror the date math already in config.py
-    end_date = datetime.today()
+    end_date   = datetime.today()
     start_date = end_date - timedelta(days=7)
 
-    start_str = start_date.strftime("%B %d, %Y")
-    end_str = end_date.strftime("%B %d, %Y")
+    prompt = template.replace("[START DATE]", start_date.strftime("%B %d, %Y"))
+    prompt = prompt.replace("[END DATE]",   end_date.strftime("%B %d, %Y"))
 
-    prompt = template.replace("[START DATE]", start_str)
-    prompt = prompt.replace("[END DATE]", end_str)
+    # Inject exclusion block if history exists
+    history = load_story_history()
+    if history:
+        print(f"Excluding {len(history)} recent story/stories from selection.")
+        exclusion_block = format_exclusion_block(history)
+        # Append just before the closing instruction in the prompt.
+        # "[EXCLUSION_BLOCK]" is a placeholder you add to the markdown template (see note below).
+        prompt = prompt.replace("[EXCLUSION_BLOCK]", exclusion_block)
+    else:
+        prompt = prompt.replace("[EXCLUSION_BLOCK]", "")
 
     return prompt
+
+
+def load_story_history() -> list[dict]:
+    """Return history entries within the exclusion window."""
+    if not config.STORY_HISTORY_FILE.exists():
+        return []
+    with open(config.STORY_HISTORY_FILE, "r", encoding="utf-8") as f:
+        entries = json.load(f)
+    cutoff = datetime.now() - timedelta(days=config.STORY_EXCLUSION_DAYS)
+    return [
+        e for e in entries
+        if datetime.fromisoformat(e["timestamp"]) >= cutoff
+    ]
+
+
+
+def format_exclusion_block(history: list[dict]) -> str:
+    if not history:
+        return ""
+    lines = [
+        "PREVIOUSLY COVERED — do not repeat any story substantially similar to the following,",
+        f"which appeared in recent newsreels. A story is substantially similar if it covers the",
+        f"same product release, model announcement, company action, or event, even from a",
+        f"different angle or source:\n",
+    ]
+    for e in history:
+        section = f" [{e['section']}]" if e.get("section") else ""
+        lines.append(f"  - {e['topic_summary']}{section}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+
+def append_to_story_history(data: dict) -> None:
+    """Record each story from this week's JSON into the history file."""
+    entries = []
+    if config.STORY_HISTORY_FILE.exists():
+        with open(config.STORY_HISTORY_FILE, "r", encoding="utf-8") as f:
+            entries = json.load(f)
+
+    for section in data.get("sections", []):
+        for story in section.get("stories", []):
+            summary = story.get("title", "").strip()
+            if summary:
+                entries.append({
+                    "timestamp":     datetime.now().isoformat(),
+                    "topic_summary": summary,
+                    "section":       section.get("section", ""),
+                })
+
+    entries = entries[-config.STORY_HISTORY_MAX:]
+    with open(config.STORY_HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(entries, f, indent=2, ensure_ascii=False)
+    print(f"Story history updated ({len(entries)} entries): {config.STORY_HISTORY_FILE}")
 
 def ensure_week_folder() -> None:
     """Create the weekly output folder if it does not already exist."""
@@ -114,9 +174,9 @@ def validate_and_report(data: dict) -> None:
             body = story.get("body", "")
             char_count = len(body)
             flag = ""
-            if char_count < 600:
+            if char_count < 660:
                 flag = f"  ⚠ SHORT ({char_count} chars)"
-            elif char_count > 1000:
+            elif char_count > 1100:
                 flag = f"  ⚠ LONG ({char_count} chars)"
             print(f"    Story {i}: {story.get('title', 'no title')[:55]}{flag}")
 
@@ -125,6 +185,7 @@ def save_stories(data: dict) -> None:
     config.ANTHROPIC_JSON_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"\nStories saved to: {config.ANTHROPIC_JSON_FILE}")
 
+
 def main() -> int:
     try:
         prompt = load_prompt()
@@ -132,12 +193,13 @@ def main() -> int:
         data = generate_stories(prompt)
         validate_and_report(data)
         save_stories(data)
+        append_to_story_history(data)   # <-- add this line
         print("\nScript generation complete.")
         return 0
     except Exception as exc:
         print(f"\nScript generation failed: {exc}")
         return 1
-
+    
 
 if __name__ == "__main__":
     raise SystemExit(main())

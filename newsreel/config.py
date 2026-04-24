@@ -70,6 +70,14 @@ ANTHROPIC_SHORT_JSON_FILE = Path(project_path(WEEK_FOLDER_NAME, "shortstories.js
 ANTHROPIC_MODEL = "claude-sonnet-4-6"
 ANTHROPIC_MAX_TOKENS = 4096
 
+# ---------------------------------------------------------------------------
+# Story topic history — prevents repeated stories across weekly runs
+# ---------------------------------------------------------------------------
+
+STORY_HISTORY_FILE    = Path(PROJECT_ROOT) / "newsreel_story_history.json"
+STORY_EXCLUSION_DAYS  = 21   # 3 weeks — matches your "last 3 weeks" problem
+STORY_HISTORY_MAX     = 200
+
 SECTION_VIDEOS = {
     "intro":                            project_path("stock_videos", "bookend.mov"),
     "Core Tech Releases":               project_path("stock_videos", "coretech.mp4"),
@@ -112,10 +120,10 @@ VIDEO_CLIP_MANIFEST = [
 ]
 
 VOICE_VOLUME_BOOST = {
-    "01_core_tech_releases":            1.4,   # Kim
-    "02_directions_in_ai_architecture": 3,   # Ryan
-    "03_ai_for_productivity":           1.2,   # Marcos
-    "04_world_impact":                  1.2,   # Clara
+    "01_core_tech_releases":            1.2,
+    "02_directions_in_ai_architecture": 3,
+    "03_ai_for_productivity":           1.2,
+    "04_world_impact":                  3,
 }
 
 VIDEO_INTRO_SILENCE     = 5.0   # seconds — pushed back to allow sting to breathe
@@ -132,11 +140,16 @@ EL_MODEL_ID = "eleven_multilingual_v2"
 # Currently used voices. MAIN is used for intro and outro:
 
 EL_VOICE_CLANCY = "FLpz0UhC9a7CIfUSBo6S"    # Clancy (MAIN)
-EL_VOICE_MAIN   = EL_VOICE_CLANCY               # alias used by newsreel_tts.py
-EL_VOICE_KIM = "O7LV5fxosQChiBE7l6Wz"       # Kim (Section 1)
-EL_VOICE_RYAN = "ya031zGCAxyRGrvB3or9"      # Ryan (Section 2)
-EL_VOICE_MARCOS = "MjDkeH2x9hCiWKXZtUPc"    # Marcos (Section 3)
-EL_VOICE_CLARA = "tMXujoAjiboschVOhAnk"     # Clara (Section 4)
+EL_VOICE_MAIN   = EL_VOICE_CLANCY           # alias used by newsreel_tts.py
+EL_VOICE_SECTION1 = "tMXujoAjiboschVOhAnk"  # (Section 1)
+EL_VOICE_SECTION2 = "ya031zGCAxyRGrvB3or9"  # (Section 2)
+EL_VOICE_SECTION3 = "tMXujoAjiboschVOhAnk"  # (Section 3)
+EL_VOICE_SECTION4 = "ya031zGCAxyRGrvB3or9"  # (Section 4)
+
+OTHER_VOICES = {
+    "Kim": "O7LV5fxosQChiBE7l6Wz",
+    "Marcos": "MjDkeH2x9hCiWKXZtUPc",
+}
 
 # Test voices
 EL_VOICE_TEST_MAIN = "FLpz0UhC9a7CIfUSBo6S"  # Clancy
@@ -149,13 +162,56 @@ AUDIO_OFFSET = 2  # seconds of video before audio starts
 AUDIO_CODEC = "aac"
 
 # ---------------------------------------------------------------------------
+# Audio time-stretch — applied by stretch_audio.py after TTS generation.
+# 1.0 = no change. 1.15 = 15% faster. Max recommended: 1.3
+# Intro and outro are left at 1.0 — Clancy's pacing works well as is.
+# ---------------------------------------------------------------------------
+
+AUDIO_SPEED_FACTORS = {
+    "00_intro":                         1.0,
+    "01_core_tech_releases":            1.15,
+    "02_directions_in_ai_architecture": 1.15,
+    "03_ai_for_productivity":           1.15,
+    "04_world_impact":                  1.15,
+    "99_outro":                         1.0,
+}
+
+# ---------------------------------------------------------------------------
+# ElevenLabs voice speed — applied at generation time, no pitch distortion.
+# 1.0 = normal. Range roughly 0.7 to 1.2. Per-stem, keyed same as manifest.
+# Intro/outro left at 1.0 — Clancy's pacing is fine as is.
+# ---------------------------------------------------------------------------
+
+EL_VOICE_SPEED = {
+    "00_intro":                         1.0,
+    "01_core_tech_releases":            1.15,
+    "02_directions_in_ai_architecture": 1.15,
+    "03_ai_for_productivity":           1.15,
+    "04_world_impact":                  1.15,
+    "99_outro":                         1.0,
+}
+
+# ElevenLabs voice stability and similarity per stem.
+# stability:        0.0–1.0. Higher = more consistent energy over long clips.
+#                   Raise for voices that fade or drift (especially long sections).
+# similarity_boost: 0.0–1.0. Higher = closer to reference voice character.
+EL_VOICE_SETTINGS = {
+    "00_intro":                         {"stability": 0.70, "similarity_boost": 0.75},
+    "01_core_tech_releases":            {"stability": 0.50, "similarity_boost": 0.75},
+    "02_directions_in_ai_architecture": {"stability": 0.50, "similarity_boost": 0.75},
+    "03_ai_for_productivity":           {"stability": 0.50, "similarity_boost": 0.75},
+    "04_world_impact":                  {"stability": 0.50, "similarity_boost": 0.75},
+    "99_outro":                         {"stability": 0.70, "similarity_boost": 0.75},
+}
+
+# ---------------------------------------------------------------------------
 # Music bed
 # ---------------------------------------------------------------------------
 
 MUSIC_STING_FILE = project_path("music", "news", "breaking-news2.mp3")
 
 MUSIC_STING_VOLUME   = 1.0   # full volume for the intro sting
-MUSIC_STING_DURATION = 8.0   # trim sting to this many seconds
+MUSIC_STING_DURATION = 11.0   # trim sting to this many seconds
 MUSIC_STING_FADE_OUT = 2.0   # fade out over last N seconds of sting
 MUSIC_BED_VOLUME     = 0.5 # low ambient bed under narration
 MUSIC_OUTRO_VOLUME   = 0.2 # low ambient bed under narration
