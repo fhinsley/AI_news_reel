@@ -28,7 +28,7 @@ Schema:
       "stories": [
         {
           "title": "Story title under 60 characters, no period",
-          "body": "Story text, 350 to 550 characters",
+          "body": "Story text, [TEXT MIN] to [TEXT MAX] characters",
           "source_name": "Publication name",
           "source_url": "https://..."
         }
@@ -60,9 +60,9 @@ STORY COUNT:
 - Drop a story slot rather than padding with a weak story.
 
 BODY LENGTH:
-- Each body must be 350 to 550 characters.
-- Count carefully. Do not go under 350 or over 550.
-- That is roughly 60 to 90 words of tight broadcast copy.
+- Each body must be [TEXT MIN] to [TEXT MAX] characters.
+- Count carefully. Do not go under [TEXT MIN] or over [TEXT MAX].
+- That is roughly [COPY MIN] to [COPY MAX] words of tight broadcast copy.
 - Lead with the most newsworthy fact. Additional context in order of importance.
 
 BODY STYLE:

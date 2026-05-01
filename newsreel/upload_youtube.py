@@ -31,7 +31,6 @@ SCOPES = [
 ]
 
 PLAYLIST_ID = "PLrR4Ecy5-pac3xXoGOmmdcHne0hVW_lWG"  # "AI Newsreel" playlist
-
 SECRETS_FILE = Path(__file__).resolve().parent.parent / "client_secrets.json"
 TOKEN_FILE   = Path(__file__).resolve().parent.parent / "youtube_token.pickle"
 

@@ -14,8 +14,12 @@ per segment, sequentially numbered for correct assembly order:
 
 import base64
 import json
+import os
+import tempfile
+from functools import reduce
 from pathlib import Path
 
+from moviepy import AudioFileClip
 from elevenlabs.client import ElevenLabs
 from elevenlabs import VoiceSettings
 
@@ -116,6 +120,31 @@ SECTION_VOICES = [
 ]
 
 # ---------------------------------------------------------------------------
+# TTS pronunciation substitution
+# ---------------------------------------------------------------------------
+
+def apply_tts_substitutions(text: str) -> str:
+    """Apply pronunciation substitutions from config.TTS_SUBSTITUTIONS.
+
+    Substitutions are applied to spoken text only — never to display text,
+    captions, or lower-third data. Called inside render_single_clip so all
+    call sites are covered without each having to remember to call this
+    explicitly.
+
+    Entries are applied longest-key-first to prevent shorter patterns from
+    clobbering longer ones (e.g. 'GPT-4' matching before 'GPT-4o').
+
+    Add entries to config.TTS_SUBSTITUTIONS as you encounter
+    mispronunciations — no code changes required here.
+    """
+    substitutions = getattr(config, "TTS_SUBSTITUTIONS", {})
+    if not substitutions:
+        return text
+    ordered = sorted(substitutions.items(), key=lambda kv: len(kv[0]), reverse=True)
+    return reduce(lambda t, kv: t.replace(kv[0], kv[1]), ordered, text)
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -164,12 +193,17 @@ def build_section_text(section_name: str, stories: list) -> str:
 
 
 def render_single_clip(text: str, voice_id: str, out_stem: str) -> tuple[bytes, dict]:
-    """Call ElevenLabs for one chunk. Returns (audio_bytes, alignment_data)."""
+    """Call ElevenLabs for one chunk. Returns (audio_bytes, alignment_data).
+
+    Pronunciation substitutions are applied here, immediately before the
+    API call, so all call sites are covered without each needing to call
+    apply_tts_substitutions explicitly.
+    """
     speed    = config.EL_VOICE_SPEED.get(out_stem, 1.0)
     settings = config.EL_VOICE_SETTINGS.get(out_stem, {"stability": 0.5, "similarity_boost": 0.75})
 
     response = client.text_to_speech.convert_with_timestamps(
-        text=text,
+        text=apply_tts_substitutions(text),
         voice_id=voice_id,
         model_id=config.EL_MODEL_ID,
         voice_settings=VoiceSettings(
@@ -187,6 +221,23 @@ def render_single_clip(text: str, voice_id: str, out_stem: str) -> tuple[bytes, 
         "character_end_times_seconds":   response.alignment.character_end_times_seconds,
     }
     return audio_bytes, alignment
+
+
+def _measure_mp3_duration(audio_bytes: bytes) -> float:
+    """Write bytes to a temp file, measure duration with AudioFileClip, clean up.
+
+    This is the only reliable way to get the true MP3 duration from raw bytes.
+    ElevenLabs does not guarantee that audio ends at the last character timestamp,
+    so using the timestamp as a duration estimate causes cumulative drift in the
+    per-story concatenation path.
+    """
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
+        tmp.write(audio_bytes)
+        tmp_path = tmp.name
+    try:
+        return AudioFileClip(tmp_path).duration
+    finally:
+        os.unlink(tmp_path)
 
 
 def render_clip(text: str, voice_id: str, out_stem: str, stories: list | None = None) -> None:
@@ -208,8 +259,8 @@ def render_clip(text: str, voice_id: str, out_stem: str, stories: list | None = 
         all_starts    = alignment["character_start_times_seconds"]
         all_ends      = alignment["character_end_times_seconds"]
     else:
-        # Per-story path — one API call per story, concatenated
-        # Section name is rendered in the first call alongside story 1
+        # Per-story path — one API call per story, concatenated.
+        # Section name is rendered in the first call alongside story 1.
         PAUSE = '<break time="1s" />'
 
         def ensure_period(t: str) -> str:
@@ -242,10 +293,12 @@ def render_clip(text: str, voice_id: str, out_stem: str, stories: list | None = 
             all_starts += [t + time_offset for t in alignment["character_start_times_seconds"]]
             all_ends   += [t + time_offset for t in alignment["character_end_times_seconds"]]
 
-            # Advance offset by duration of this chunk's audio
-            # MP3 duration from byte length is approximate — use last end timestamp
-            if alignment["character_end_times_seconds"]:
-                time_offset += alignment["character_end_times_seconds"][-1] + 1.0  # +1s for the inter-story gap
+            # Measure the true MP3 duration of this chunk so the next story's
+            # timestamps are offset to the correct position in the concatenated file.
+            # The SSML <break> silence is already encoded in the rendered bytes, so
+            # AudioFileClip gives the exact duration including that gap — no manual
+            # inter-story padding needed or correct.
+            time_offset += _measure_mp3_duration(audio_bytes)
 
     # Write audio
     with open(audio_path, "wb") as f:

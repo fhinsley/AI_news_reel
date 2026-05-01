@@ -36,3 +36,6 @@ scripts/youtube_token.pickle
 
 # VS Code workspace settings
 .vscode/
+
+# Local generated history
+newsreel_story_history.json

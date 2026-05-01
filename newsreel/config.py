@@ -78,6 +78,15 @@ STORY_HISTORY_FILE    = Path(PROJECT_ROOT) / "newsreel_story_history.json"
 STORY_EXCLUSION_DAYS  = 21   # 3 weeks — matches your "last 3 weeks" problem
 STORY_HISTORY_MAX     = 200
 
+STORY_LEN_MIN       = 660
+STORY_LEN_MAX       = 1100
+
+STORY_TEXT_MIN = 350
+STORY_TEXT_MAX = 550
+
+STORY_COPY_MIN = 60
+STORY_COPY_MAX = 90
+
 SECTION_VIDEOS = {
     "intro":                            project_path("stock_videos", "bookend.mov"),
     "Core Tech Releases":               project_path("stock_videos", "coretech.mp4"),
@@ -93,10 +102,8 @@ SOURCE_PHRASE = "Sources this week:"
 
 BG_VIDEOS = [
     project_path("stock_videos", "vecteezy_03.mp4"),
-    project_path("stock_videos", "vecteezy_05.mp4"),
     project_path("stock_videos", "vecteezy_06.mp4"),
     project_path("stock_videos", "vecteezy_04.mp4"),
-    project_path("stock_videos", "vecteezy_10.mp4"),
     project_path("stock_videos", "vecteezy_14.mov"),
     project_path("stock_videos", "vecteezy_15.mp4"),
     project_path("stock_videos", "vecteezy_16.mov"),
@@ -104,7 +111,6 @@ BG_VIDEOS = [
     project_path("stock_videos", "vecteezy_18.mov"),
     project_path("stock_videos", "vecteezy_19.mov"),
     project_path("stock_videos", "vecteezy_20.mov"),
-    project_path("stock_videos", "vecteezy_21.mov"),
     project_path("stock_videos", "vecteezy_22.mov"),
     project_path("stock_videos", "vecteezy_23.mov"),
     project_path("stock_videos", "vecteezy_24.mov"),
@@ -203,6 +209,24 @@ EL_VOICE_SETTINGS = {
     "04_world_impact":                  {"stability": 0.50, "similarity_boost": 0.75},
     "99_outro":                         {"stability": 0.70, "similarity_boost": 0.75},
 }
+
+# ---------------------------------------------------------------------------
+# TTS pronunciation lexicon — spoken text only, never display text or captions.
+# Entries are applied longest-key-first to prevent shorter keys clobbering longer ones.
+# ---------------------------------------------------------------------------
+
+TTS_SUBSTITUTIONS = {
+    "AI":      "A I",
+    "AMD":     "A M D",
+    "capex":  "cap ex",
+    "Epoch":   "E pok",
+    "LLM":     "L L M",
+    "METR":    "Meter",
+    "pct":     "percent",
+}
+
+
+
 
 # ---------------------------------------------------------------------------
 # Music bed

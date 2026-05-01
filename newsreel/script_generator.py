@@ -11,11 +11,11 @@ for all downstream steps (TTS assembly, video build, etc.).
 """
 
 import json
-import re
 from pathlib import Path
 from datetime import datetime, timedelta
 import anthropic
 import config
+from functools import reduce
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -30,25 +30,29 @@ def load_prompt() -> str:
 
     template = PROMPT_FILE.read_text(encoding="utf-8")
 
-    end_date   = datetime.today()
-    start_date = end_date - timedelta(days=7)
-
-    prompt = template.replace("[START DATE]", start_date.strftime("%B %d, %Y"))
-    prompt = prompt.replace("[END DATE]",   end_date.strftime("%B %d, %Y"))
-
     # Inject exclusion block if history exists
     history = load_story_history()
     if history:
         print(f"Excluding {len(history)} recent story/stories from selection.")
         exclusion_block = format_exclusion_block(history)
-        # Append just before the closing instruction in the prompt.
-        # "[EXCLUSION_BLOCK]" is a placeholder you add to the markdown template (see note below).
-        prompt = prompt.replace("[EXCLUSION_BLOCK]", exclusion_block)
     else:
-        prompt = prompt.replace("[EXCLUSION_BLOCK]", "")
+        exclusion_block = ""
 
-    return prompt
+    replacements = {
+        "[START DATE]":      config.START_DATE.strftime("%B %d, %Y"),
+        "[END DATE]":        config.END_DATE.strftime("%B %d, %Y"),
+        "[TEXT MIN]":        str(config.STORY_TEXT_MIN),
+        "[TEXT MAX]":        str(config.STORY_TEXT_MAX),
+        "[COPY MIN]":        str(config.STORY_COPY_MIN),
+        "[COPY MAX]":        str(config.STORY_COPY_MAX),
+        "[EXCLUSION_BLOCK]": exclusion_block,
+    }
 
+    return reduce(
+            lambda text, kv: text.replace(kv[0], kv[1]),
+            replacements.items(),
+            template,
+        )
 
 def load_story_history() -> list[dict]:
     """Return history entries within the exclusion window."""
@@ -61,7 +65,6 @@ def load_story_history() -> list[dict]:
         e for e in entries
         if datetime.fromisoformat(e["timestamp"]) >= cutoff
     ]
-
 
 
 def format_exclusion_block(history: list[dict]) -> str:
@@ -78,7 +81,6 @@ def format_exclusion_block(history: list[dict]) -> str:
         lines.append(f"  - {e['topic_summary']}{section}")
     lines.append("")
     return "\n".join(lines)
-
 
 
 def append_to_story_history(data: dict) -> None:
@@ -103,11 +105,13 @@ def append_to_story_history(data: dict) -> None:
         json.dump(entries, f, indent=2, ensure_ascii=False)
     print(f"Story history updated ({len(entries)} entries): {config.STORY_HISTORY_FILE}")
 
+
 def ensure_week_folder() -> None:
     """Create the weekly output folder if it does not already exist."""
     folder = Path(config.WEEK_FOLDER)
     folder.mkdir(parents=True, exist_ok=True)
     print(f"Week folder ready: {folder}")
+
 
 def generate_stories(prompt: str) -> dict:
     """Send the prompt to Claude and return parsed JSON stories.
@@ -142,12 +146,25 @@ def generate_stories(prompt: str) -> dict:
 
     raw = "\n".join(text_parts).strip()
 
-    # Find the outermost { ... } and parse only that, ignoring anything before or after.
+    # Find the first complete top-level JSON object using brace-depth tracking.
     start = raw.find("{")
-    end = raw.rfind("}")
-    if start == -1 or end == -1:
+    if start == -1:
         raise RuntimeError(
             f"No JSON object found in Claude response.\n\nRaw response:\n{raw[:500]}"
+        )
+    depth = 0
+    end = None
+    for i, ch in enumerate(raw[start:], start):
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                end = i
+                break
+    if end is None:
+        raise RuntimeError(
+            f"Unclosed JSON object in Claude response.\n\nRaw response:\n{raw[:500]}"
         )
     raw = raw[start : end + 1]
 
@@ -159,6 +176,7 @@ def generate_stories(prompt: str) -> dict:
         )
 
     return data
+
 
 def validate_and_report(data: dict) -> None:
     """Print a summary and warn on any stories outside the character target."""
@@ -174,11 +192,12 @@ def validate_and_report(data: dict) -> None:
             body = story.get("body", "")
             char_count = len(body)
             flag = ""
-            if char_count < 660:
+            if char_count < config.STORY_LEN_MIN:
                 flag = f"  ⚠ SHORT ({char_count} chars)"
-            elif char_count > 1100:
+            elif char_count > config.STORY_LEN_MAX:
                 flag = f"  ⚠ LONG ({char_count} chars)"
             print(f"    Story {i}: {story.get('title', 'no title')[:55]}{flag}")
+
 
 def save_stories(data: dict) -> None:
     """Write the validated JSON to the weekly stories file."""
@@ -193,13 +212,13 @@ def main() -> int:
         data = generate_stories(prompt)
         validate_and_report(data)
         save_stories(data)
-        append_to_story_history(data)   # <-- add this line
+        append_to_story_history(data)
         print("\nScript generation complete.")
         return 0
     except Exception as exc:
         print(f"\nScript generation failed: {exc}")
         return 1
-    
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

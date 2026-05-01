@@ -11,6 +11,9 @@ Output: <WEEK_FOLDER>/Captions.srt
 
 import json
 from pathlib import Path
+
+from moviepy import AudioFileClip
+
 import config
 
 
@@ -117,7 +120,7 @@ def main() -> int:
     all_entries = []
 
     for stem, label in config.VIDEO_CLIP_MANIFEST:
-        ts_path = week / f"{stem}_timestamps.json"
+        ts_path  = week / f"{stem}_timestamps.json"
         mp3_path = week / f"{stem}.mp3"
 
         if not mp3_path.exists():
@@ -125,8 +128,6 @@ def main() -> int:
             cursor += config.VIDEO_INTER_CLIP_SILENCE
             continue
 
-        # Get clip duration from audio file
-        from moviepy import AudioFileClip
         clip_duration = AudioFileClip(str(mp3_path)).duration
 
         if not ts_path.exists():
@@ -134,7 +135,7 @@ def main() -> int:
             cursor += clip_duration + config.VIDEO_INTER_CLIP_SILENCE
             continue
 
-        ts   = load_timestamps(ts_path)
+        ts    = load_timestamps(ts_path)
         words = chars_to_words(
             ts["characters"],
             ts["character_start_times_seconds"],
