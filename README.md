@@ -115,6 +115,45 @@ The sting plays from `t=0`; the bed starts when narration begins. Both mix with 
 
 ---
 
+## NewsCrew Pipeline (AI Avatar Studio Broadcast)
+
+Builds a studio-style news broadcast video using AI-generated anchor avatars, shot planning, and compositing. This pipeline is designed to look like a live newsroom segment with virtual set framing, anchor clips, b-roll inserts, and lower-third graphics.
+
+### What It Does
+
+1. **Generates stories** — Uses Claude with web search to produce structured `stories.json` content for the episode
+2. **Renders anchor avatars** — Submits avatar jobs and downloads generated anchor clips
+3. **Plans camera/segment shots** — Creates `shot_plan.json` with segment timing, shot mode, and clip references
+4. **Fetches visuals** — Pulls b-roll assets for visual segments
+5. **Composites final program** — Builds a full studio-style MP4 with background set, anchors, b-roll windows or full-frame b-roll, PiP inserts, and lower-third overlays
+
+### Run
+
+```bash
+python newscrew/run_newscrew.py
+```
+
+| Step | Script | Input | Output |
+|------|--------|-------|--------|
+| 1 | `newscrew/script_generator.py` | `newscrew/markdown/Weekly_Newsreel_Prompt.md` | `newscrew/episodes/<episode>/stories.json` |
+| 2 | `newscrew/anchor_renderer.py` | stories + avatar config | `newscrew/episodes/<episode>/anchor_clips/*.mp4`, `anchor_jobs.json` |
+| 3 | `newscrew/plan_shots.py` | stories + anchor jobs | `newscrew/episodes/<episode>/shot_plan.json` |
+| 4 | `newscrew/fetch_visuals.py` | shot plan + story metadata | b-roll assets in episode folder |
+| 5 | `newscrew/build_video.py` | shot plan + clips + assets | `newscrew/episodes/<episode>/News.mp4` |
+
+### Shot Modes
+
+The compositor supports newsroom-style segment layouts configured per segment in `shot_plan.json`:
+
+- `wide` — two-anchor desk view with b-roll on wall screen
+- `solo_a` — focus on anchor A, non-speaking anchor dimmed
+- `solo_b` — focus on anchor B, non-speaking anchor dimmed
+- `broll` — full-frame b-roll with anchor picture-in-picture
+
+### Assets and Version Control
+
+The directory `newscrew/assets/` is part of the project structure, but generated/static media files inside it are ignored from version control. A placeholder file (`newscrew/assets/.gitkeep`) preserves the directory in Git.
+
 ## Two-Sides Debate Pipeline
 
 Generates a point-counterpoint debate video on a current news or sports topic, narrated by two debaters and a neutral anchor. The debate topic is selected automatically from this week's news; the mode (news or sports) is set in `debate/config.py`.
@@ -232,6 +271,18 @@ newsreel/                   newsreel pipeline scripts
   upload_youtube.py
   watchnews.py
   makeinoutro.py
+newscrew/                   AI-avatar studio broadcast pipeline
+  __init__.py
+  run_newscrew.py
+  config.py
+  script_generator.py
+  anchor_renderer.py
+  plan_shots.py
+  fetch_visuals.py
+  build_video.py
+  smoke_test.py
+  assets/                   project-local visual assets (contents gitignored)
+  episodes/                 generated episode artifacts
 debate/                     debate pipeline scripts
   config.py
   script_generator.py
