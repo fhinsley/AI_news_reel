@@ -1,0 +1,544 @@
+"""
+build_video.py — NewsCrew compositor
+
+Reads a shot_plan.json produced by plan_shots.py (or hand-authored for testing)
+and composites the final episode MP4 from:
+
+    Layer 1  virtual set background image (SET_BACKGROUND_IMAGE)
+    Layer 2  B-roll clip  — either wall-screen size or full-frame
+    Layer 3  anchor clip(s) — A solo, B solo, or both (wide two-shot)
+    Layer 4  PiP anchor insert — small anchor box over full-frame B-roll
+    Layer 5  lower-third overlay — headline + source slug
+
+Shot modes (set in each shot plan segment):
+    "wide"      Both anchors visible behind desk, B-roll on wall screen
+    "solo_a"    Anchor A cropped/enlarged, B dimmed, B-roll on wall screen
+    "solo_b"    Anchor B cropped/enlarged, A dimmed, B-roll on wall screen
+    "broll"     B-roll fills frame; PiP anchor box in corner
+
+Usage:
+    python build_video.py                          # uses SHOT_PLAN_JSON from config
+    python build_video.py --plan path/to/plan.json
+    python build_video.py --dry-run                # print segment table, no render
+
+Shot plan JSON schema:
+    {
+      "episode": "050926_Episode",
+      "segments": [
+        {
+          "segment_id":       "unique string matching anchor_jobs.json key",
+          "shot_mode":        "wide" | "solo_a" | "solo_b" | "broll",
+          "anchor_id":        "Annie" | "Vesperi" | ... (speaking anchor),
+          "anchor_clip":      "path/to/anchor_clips/segment_id.mp4",
+          "broll_clip":       "path/to/broll/clip.mp4" | null,
+          "lower_third_headline": "Story headline text" | null,
+          "lower_third_source":   "Source Name" | null,
+          "transition_in":    "cut" | "crossfade",   // default "cut"
+          "transition_out":   "cut" | "crossfade"    // default "cut"
+        },
+        ...
+      ]
+    }
+
+Notes:
+    - Segments without an anchor_clip are skipped with a warning (not yet rendered).
+    - Segments without a broll_clip fall back to the ambient background loop.
+    - The desk mask is painted into SET_BACKGROUND_IMAGE — anchor clips are cropped
+      at ANCHOR_CROP_BOTTOM pixels from the bottom to simulate sitting behind the desk.
+    - All geometry constants live in config.py under "# Video / compositor".
+"""
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+from moviepy import (
+    VideoFileClip,
+    ImageClip,
+    ColorClip,
+    CompositeVideoClip,
+    TextClip,
+    concatenate_videoclips,
+)
+from moviepy.video.fx import Resize, FadeIn, FadeOut, CrossFadeIn, CrossFadeOut, Crop
+
+from config import (
+    EPISODE_DIR,
+    ANCHOR_JOBS_JSON,
+    OUTPUT_VIDEO,
+    VIDEO_RESOLUTION,
+    VIDEO_FPS,
+    ANCHORS,
+    # Compositor geometry — added to config.py (see block at bottom of this file)
+    SET_BACKGROUND_IMAGE,
+    ANCHOR_A_FRAME,
+    ANCHOR_B_FRAME,
+    ANCHOR_CROP_BOTTOM,
+    WALL_SCREEN_FRAME,
+    PIP_FRAME,
+    PIP_ANCHOR_ID,
+    LOWER_THIRD_FRAME,
+    LOWER_THIRD_BG_COLOR,
+    LOWER_THIRD_HEADLINE_COLOR,
+    LOWER_THIRD_SOURCE_COLOR,
+    LOWER_THIRD_FONT,
+    LOWER_THIRD_HEADLINE_SIZE,
+    LOWER_THIRD_SOURCE_SIZE,
+    CROSSFADE_DURATION,
+    SHOT_PLAN_JSON,
+    PROJECT_ROOT,
+)
+
+W, H = VIDEO_RESOLUTION
+ANCHOR_LOOKUP = {a["id"]: a for a in ANCHORS}
+
+# File extensions treated as still images rather than video clips
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+
+
+# ── Geometry helpers ───────────────────────────────────────────────────────────
+
+def _frame_to_pos(frame: tuple) -> tuple:
+    """Convert (x, y, w, h) frame tuple to (x, y) position for with_position."""
+    return (frame[0], frame[1])
+
+
+def _frame_size(frame: tuple) -> tuple:
+    """Return (w, h) from (x, y, w, h) frame tuple."""
+    return (frame[2], frame[3])
+
+
+# ── Clip loaders ───────────────────────────────────────────────────────────────
+
+def load_anchor_clip(clip_path: str | Path, target_duration: float | None = None) -> VideoFileClip:
+    """
+    Load an anchor MP4, strip audio (HeyGen clips carry voice audio),
+    and optionally trim/extend to target_duration.
+    """
+    clip = VideoFileClip(str(clip_path))
+    if target_duration is not None and clip.duration > target_duration:
+        clip = clip.with_end(target_duration)
+    return clip
+
+
+def load_broll_clip(clip_path: str | Path, duration: float) -> VideoFileClip | ImageClip:
+    """
+    Load a B-roll asset and fit it to exactly duration seconds.
+
+    Still images (.jpg, .jpeg, .png, .webp) are loaded as ImageClip and held
+    for the full duration — this is the expected output of fetch_visuals.py.
+
+    Video files are muted, then looped or trimmed to duration.
+    """
+    p = Path(clip_path)
+    if p.suffix.lower() in IMAGE_EXTENSIONS:
+        return ImageClip(str(p)).with_duration(duration)
+
+    # Video path
+    clip = VideoFileClip(str(p)).with_volume_scale(0)
+    if clip.duration < duration:
+        from moviepy.video.fx import Loop
+        clip = clip.with_effects([Loop(duration=duration)])
+    else:
+        clip = clip.with_end(duration)
+    return clip
+
+
+def make_fallback_broll(duration: float, size: tuple) -> ColorClip:
+    """Solid dark slate fallback when no B-roll clip is available."""
+    return ColorClip(size=size, color=[18, 22, 30], duration=duration)
+
+
+# ── Anchor clip compositing ────────────────────────────────────────────────────
+
+def _resize_and_crop_anchor(clip: VideoFileClip, frame: tuple) -> VideoFileClip:
+    """
+    Resize anchor clip to fill frame width, then bottom-crop by ANCHOR_CROP_BOTTOM
+    pixels to simulate the anchor sitting behind the desk.
+    """
+    fx, fy, fw, fh = frame
+    # Resize to frame width, preserve aspect
+    clip = clip.with_effects([Resize(width=fw)])
+    # Crop bottom to hide below-desk portion
+    if ANCHOR_CROP_BOTTOM > 0:
+        clip_h = int(clip.size[1])
+        crop_h = max(1, clip_h - ANCHOR_CROP_BOTTOM)
+        clip = clip.with_effects([Crop(y1=0, y2=crop_h)])
+    # Resize again to exact frame height after crop
+    clip = clip.with_effects([Resize((fw, fh))])
+    return clip.with_position(_frame_to_pos(frame))
+
+
+def _dim_anchor(clip: VideoFileClip) -> VideoFileClip:
+    """Reduce opacity for the non-speaking anchor in solo shots."""
+    return clip.with_opacity(0.35)
+
+
+def build_anchor_layers(
+    shot_mode: str,
+    anchor_id: str,
+    anchor_clip_path: str | Path,
+    duration: float,
+) -> list:
+    """
+    Return a list of positioned anchor VideoFileClip layers for this segment.
+
+    wide    → A at ANCHOR_A_FRAME, B at ANCHOR_B_FRAME (both full opacity)
+              NOTE: wide mode requires both anchor clips; in practice the speaking
+              anchor's clip is used for both positions in the current single-clip
+              pipeline. When dual-clip wide shots are supported, extend this function
+              to accept anchor_clip_b_path.
+
+    solo_a  → A at ANCHOR_A_FRAME full, B position dimmed static frame
+    solo_b  → B at ANCHOR_B_FRAME full, A position dimmed static frame
+    """
+    clip = load_anchor_clip(anchor_clip_path, target_duration=duration)
+
+    if shot_mode == "wide":
+        # Use the same clip mirrored to both positions (single-clip wide shot).
+        # TODO: replace with distinct A/B clips when both are available.
+        clip_a = _resize_and_crop_anchor(clip, ANCHOR_A_FRAME)
+        clip_b = _resize_and_crop_anchor(clip, ANCHOR_B_FRAME)
+        return [clip_a, clip_b]
+
+    elif shot_mode == "solo_a":
+        clip_a = _resize_and_crop_anchor(clip, ANCHOR_A_FRAME)
+        # Dimmed B: freeze first frame of A clip as a stand-in
+        clip_b = (
+            clip.with_end(1 / VIDEO_FPS)
+            .with_effects([Resize(_frame_size(ANCHOR_B_FRAME))])
+            .with_position(_frame_to_pos(ANCHOR_B_FRAME))
+            .with_duration(duration)
+        )
+        clip_b = _dim_anchor(clip_b)
+        return [clip_a, clip_b]
+
+    elif shot_mode == "solo_b":
+        clip_b = _resize_and_crop_anchor(clip, ANCHOR_B_FRAME)
+        clip_a = (
+            clip.with_end(1 / VIDEO_FPS)
+            .with_effects([Resize(_frame_size(ANCHOR_A_FRAME))])
+            .with_position(_frame_to_pos(ANCHOR_A_FRAME))
+            .with_duration(duration)
+        )
+        clip_a = _dim_anchor(clip_a)
+        return [clip_b, clip_a]
+
+    elif shot_mode == "broll":
+        # No anchor layers in the set — handled by build_pip_layer instead
+        return []
+
+    else:
+        raise ValueError(f"Unknown shot_mode: {shot_mode!r}")
+
+
+# ── B-roll layer ───────────────────────────────────────────────────────────────
+
+def build_broll_layer(
+    shot_mode: str,
+    broll_clip_path: str | Path | None,
+    duration: float,
+) -> VideoFileClip | ColorClip:
+    """
+    Return the B-roll clip positioned and sized for the current shot mode.
+
+    wide / solo_*  → B-roll confined to WALL_SCREEN_FRAME (wall-mounted screen)
+    broll          → B-roll fills full frame (W × H)
+    """
+    if shot_mode == "broll":
+        target_size = (W, H)
+        pos = (0, 0)
+    else:
+        target_size = _frame_size(WALL_SCREEN_FRAME)
+        pos = _frame_to_pos(WALL_SCREEN_FRAME)
+
+    if broll_clip_path and Path(broll_clip_path).exists():
+        clip = load_broll_clip(broll_clip_path, duration)
+        clip = clip.with_effects([Resize(target_size)])
+    else:
+        clip = make_fallback_broll(duration, target_size)
+
+    return clip.with_position(pos)
+
+
+# ── PiP anchor layer (broll mode only) ────────────────────────────────────────
+
+def build_pip_layer(
+    anchor_clip_path: str | Path,
+    duration: float,
+) -> VideoFileClip:
+    """
+    Small anchor insert for broll shot mode.
+    Positioned at PIP_FRAME, with a thin border via Margin effect.
+    """
+    from moviepy.video.fx import Margin
+
+    clip = load_anchor_clip(anchor_clip_path, target_duration=duration)
+    fw, fh = _frame_size(PIP_FRAME)
+    clip = clip.with_effects([Resize((fw, fh))])
+    # Thin 2px border rendered as a margin with background color
+    clip = clip.with_effects([Margin(margin_size=2, color=[200, 200, 200])])
+    return clip.with_position(_frame_to_pos(PIP_FRAME))
+
+
+# ── Lower-third overlay ────────────────────────────────────────────────────────
+
+def build_lower_third(
+    headline: str | None,
+    source: str | None,
+    duration: float,
+) -> CompositeVideoClip | None:
+    """
+    Returns a CompositeVideoClip of the lower-third bar + text, or None if
+    both headline and source are absent.
+
+    Layout (relative to LOWER_THIRD_FRAME):
+        [  HEADLINE TEXT                         SOURCE  ]
+    """
+    if not headline and not source:
+        return None
+
+    lx, ly, lw, lh = LOWER_THIRD_FRAME
+
+    # Background bar
+    bg = ColorClip(size=(lw, lh), color=LOWER_THIRD_BG_COLOR, duration=duration)
+    layers = [bg]
+
+    # Headline
+    if headline:
+        try:
+            hl = TextClip(
+                font=LOWER_THIRD_FONT,
+                text=headline,
+                font_size=LOWER_THIRD_HEADLINE_SIZE,
+                color=LOWER_THIRD_HEADLINE_COLOR,
+                bg_color=None,
+                transparent=True,
+                duration=duration,
+            ).with_position((16, (lh - LOWER_THIRD_HEADLINE_SIZE) // 2))
+            layers.append(hl)
+        except Exception as e:
+            print(f"  WARNING: lower-third headline render failed: {e}")
+
+    # Source slug (right-aligned)
+    if source:
+        try:
+            src = TextClip(
+                font=LOWER_THIRD_FONT,
+                text=source.upper(),
+                font_size=LOWER_THIRD_SOURCE_SIZE,
+                color=LOWER_THIRD_SOURCE_COLOR,
+                bg_color=None,
+                transparent=True,
+                duration=duration,
+            ).with_position((lw - 200, (lh - LOWER_THIRD_SOURCE_SIZE) // 2))
+            layers.append(src)
+        except Exception as e:
+            print(f"  WARNING: lower-third source render failed: {e}")
+
+    lt = CompositeVideoClip(layers, size=(lw, lh)).with_position((lx, ly))
+    return lt.with_effects([FadeIn(0.15), FadeOut(0.15)])
+
+
+# ── Background ─────────────────────────────────────────────────────────────────
+
+def load_background(duration: float) -> ImageClip | ColorClip:
+    """Load the virtual set background image, or fall back to dark color."""
+    bg_path = Path(SET_BACKGROUND_IMAGE)
+    if bg_path.exists():
+        return ImageClip(str(bg_path)).with_duration(duration).with_effects([Resize((W, H))])
+    else:
+        print(f"  WARNING: SET_BACKGROUND_IMAGE not found at {bg_path} — using color fallback")
+        return ColorClip(size=(W, H), color=[12, 14, 20], duration=duration)
+
+
+# ── Single segment compositor ──────────────────────────────────────────────────
+
+def composite_segment(seg: dict) -> CompositeVideoClip | None:
+    """
+    Build one CompositeVideoClip for a single shot plan segment.
+    Returns None if the anchor clip is missing (segment not yet rendered).
+    """
+    sid = seg["segment_id"]
+    shot_mode = seg.get("shot_mode", "solo_a")
+    anchor_clip_path = seg.get("anchor_clip")
+
+    # Guard: anchor clip must exist
+    if not anchor_clip_path or not Path(anchor_clip_path).exists():
+        print(f"  SKIP {sid}: anchor clip not found at {anchor_clip_path!r}")
+        return None
+
+    # Duration is driven by the anchor clip
+    anchor_clip_probe = VideoFileClip(str(anchor_clip_path))
+    duration = anchor_clip_probe.duration
+    anchor_clip_probe.close()
+
+    broll_path = seg.get("broll_clip")
+    headline = seg.get("lower_third_headline")
+    source = seg.get("lower_third_source")
+
+    print(f"  compositing [{shot_mode:6s}] {sid}  ({duration:.1f}s)")
+
+    # Layer 1 — background
+    bg = load_background(duration)
+
+    # Layer 2 — B-roll
+    broll = build_broll_layer(shot_mode, broll_path, duration)
+
+    # Layer 3 — anchor(s)
+    anchor_layers = build_anchor_layers(shot_mode, seg.get("anchor_id", ""), anchor_clip_path, duration)
+
+    # Layer 4 — PiP (broll mode only)
+    pip_layers = []
+    if shot_mode == "broll" and anchor_clip_path:
+        pip_layers = [build_pip_layer(anchor_clip_path, duration)]
+
+    # Layer 5 — lower third
+    lt = build_lower_third(headline, source, duration)
+    lt_layers = [lt] if lt else []
+
+    all_layers = [bg, broll] + anchor_layers + pip_layers + lt_layers
+    return CompositeVideoClip(all_layers, size=(W, H)).with_duration(duration)
+
+
+# ── Transition handling ────────────────────────────────────────────────────────
+
+def apply_transitions(clips_meta: list[tuple]) -> list:
+    """
+    clips_meta: list of (CompositeVideoClip, transition_in, transition_out)
+
+    Applies crossfade effects at segment boundaries.
+    Returns a flat list of clips ready for concatenate_videoclips.
+    """
+    out = []
+    for i, (clip, t_in, t_out) in enumerate(clips_meta):
+        is_first = i == 0
+        is_last = i == len(clips_meta) - 1
+
+        if not is_first and t_in == "crossfade":
+            clip = clip.with_effects([CrossFadeIn(CROSSFADE_DURATION)])
+        if not is_last and t_out == "crossfade":
+            clip = clip.with_effects([CrossFadeOut(CROSSFADE_DURATION)])
+
+        out.append(clip)
+    return out
+
+
+# ── Shot plan loading ──────────────────────────────────────────────────────────
+
+def load_shot_plan(plan_path: Path) -> dict:
+    if not plan_path.exists():
+        print(f"ERROR: shot plan not found: {plan_path}")
+        sys.exit(1)
+    return json.loads(plan_path.read_text())
+
+
+def resolve_clip_paths(plan: dict) -> dict:
+    """
+    If anchor_clip paths in the plan are relative, resolve them against EPISODE_DIR.
+    Also back-fills anchor_clip from anchor_jobs.json if anchor_clip is null.
+    """
+    jobs = {}
+    if ANCHOR_JOBS_JSON.exists():
+        jobs = json.loads(ANCHOR_JOBS_JSON.read_text())
+
+    for seg in plan["segments"]:
+        sid = seg["segment_id"]
+
+        # Back-fill from anchor_jobs.json
+        if not seg.get("anchor_clip") and sid in jobs:
+            job = jobs[sid]
+            if job.get("clip_path"):
+                seg["anchor_clip"] = job["clip_path"]
+
+        # Resolve relative paths against PROJECT_ROOT
+        for key in ("anchor_clip", "broll_clip"):
+            if seg.get(key):
+                p = Path(seg[key])
+                if not p.is_absolute():
+                    seg[key] = str(PROJECT_ROOT / p)
+
+    return plan
+
+
+# ── Dry-run table ──────────────────────────────────────────────────────────────
+
+def print_dry_run(plan: dict) -> None:
+    segs = plan["segments"]
+    print(f"\nShot plan: {plan.get('episode', '?')}  ({len(segs)} segments)\n")
+    print(f"  {'#':<3} {'segment_id':<45} {'mode':<8} {'anchor':<10} {'anchor_clip':<6} {'broll':<6}")
+    print(f"  {'-'*3} {'-'*45} {'-'*8} {'-'*10} {'-'*6} {'-'*6}")
+    for i, seg in enumerate(segs, 1):
+        has_anchor = "YES" if seg.get("anchor_clip") and Path(seg["anchor_clip"]).exists() else "---"
+        has_broll  = "YES" if seg.get("broll_clip")  and Path(seg["broll_clip"]).exists()  else "---"
+        print(
+            f"  {i:<3} {seg['segment_id'][:45]:<45} "
+            f"{seg.get('shot_mode','?'):<8} "
+            f"{seg.get('anchor_id','?'):<10} "
+            f"{has_anchor:<6} "
+            f"{has_broll:<6}"
+        )
+    missing_anchor = sum(
+        1 for s in segs
+        if not s.get("anchor_clip") or not Path(s["anchor_clip"]).exists()
+    )
+    if missing_anchor:
+        print(f"\n  {missing_anchor} segment(s) missing anchor clips — will be skipped at render time.")
+    print()
+
+
+# ── Main ───────────────────────────────────────────────────────────────────────
+
+def main():
+    parser = argparse.ArgumentParser(description="NewsCrew compositor")
+    parser.add_argument("--plan",    type=Path, default=SHOT_PLAN_JSON, help="Path to shot_plan.json")
+    parser.add_argument("--out",     type=Path, default=OUTPUT_VIDEO,   help="Output MP4 path")
+    parser.add_argument("--dry-run", action="store_true",               help="Print segment table, no render")
+    parser.add_argument("--preset",  default="medium",                  help="ffmpeg preset (ultrafast..veryslow)")
+    args = parser.parse_args()
+
+    plan = load_shot_plan(args.plan)
+    plan = resolve_clip_paths(plan)
+
+    if args.dry_run:
+        print_dry_run(plan)
+        return
+
+    print(f"\nBuilding episode: {plan.get('episode', '?')}")
+    print(f"  {len(plan['segments'])} segments in shot plan")
+    print(f"  output → {args.out}\n")
+
+    clips_meta = []
+    for seg in plan["segments"]:
+        comp = composite_segment(seg)
+        if comp is None:
+            continue
+        t_in  = seg.get("transition_in",  "cut")
+        t_out = seg.get("transition_out", "cut")
+        clips_meta.append((comp, t_in, t_out))
+
+    if not clips_meta:
+        print("ERROR: no compositable segments found. Run anchor_renderer.py first.")
+        sys.exit(1)
+
+    print(f"\n  {len(clips_meta)} segments composited. Concatenating...")
+    final_clips = apply_transitions(clips_meta)
+    episode = concatenate_videoclips(final_clips, method="compose")
+
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    print(f"  Writing {args.out} ...")
+    episode.write_videofile(
+        str(args.out),
+        fps=VIDEO_FPS,
+        codec="libx264",
+        audio_codec="aac",
+        preset=args.preset,
+        threads=4,
+        logger="bar",
+    )
+    print(f"\nDone. Episode saved to: {args.out}")
+
+
+if __name__ == "__main__":
+    main()

@@ -16,7 +16,7 @@ SOURCES:
 OUTPUT FORMAT:
 Respond with a single valid JSON object. No preamble, no explanation, no markdown fences. Just the JSON.
 
-[EXCLUSION_BLOCK]
+[EXCLUSION BLOCK]
 
 Schema:
 
@@ -27,10 +27,7 @@ Schema:
       "section": "Core Tech Releases",
       "stories": [
         {
-          "title": "Story title under 60 characters, no period",
-          "body": "Story text, [TEXT MIN] to [TEXT MAX] characters",
-          "source_name": "Publication name",
-          "source_url": "https://..."
+          [SCHEMA BLOCK]
         }
       ]
     },

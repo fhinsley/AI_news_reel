@@ -1,0 +1,9 @@
+.env
+episodes/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Keep directory structure in git, ignore generated/static asset files.
+assets/*
+!assets/.gitkeep

@@ -9,8 +9,8 @@ PROJECT_ROOT = SCRIPT_DIR.parent
 def project_path(*parts):
     return str(PROJECT_ROOT.joinpath(*parts))
 
-END_DATE = datetime.today() - timedelta(days=1)
-# END_DATE = datetime.today()
+# END_DATE = datetime.today() - timedelta(days=1)
+END_DATE = datetime.today()
 START_DATE = END_DATE - timedelta(days=6)
 
 OPENING_TITLE = f"AI Newsreel Week of {START_DATE.strftime('%B %d')} through {END_DATE.strftime('%B %d, %Y')}"
@@ -76,13 +76,16 @@ ANTHROPIC_MAX_TOKENS = 4096
 
 STORY_HISTORY_FILE    = Path(PROJECT_ROOT) / "newsreel_story_history.json"
 STORY_EXCLUSION_DAYS  = 21   # 3 weeks — matches your "last 3 weeks" problem
-STORY_HISTORY_MAX     = 200
+STORY_HISTORY_MAX     = 25
 
 STORY_LEN_MIN       = 660
 STORY_LEN_MAX       = 1100
+STORY_SHORT_MIN       = 660 // 2
+STORY_SHORT_MAX       = 1100 // 2
 
-STORY_TEXT_MIN = 350
-STORY_TEXT_MAX = 550
+# Make shorter for testing, or if you want more but shorter stories in the reel. Adjust as needed.
+STORY_TEXT_MIN = STORY_LEN_MIN
+STORY_TEXT_MAX = STORY_LEN_MAX
 
 STORY_COPY_MIN = 60
 STORY_COPY_MAX = 90
@@ -216,11 +219,12 @@ EL_VOICE_SETTINGS = {
 # ---------------------------------------------------------------------------
 
 TTS_SUBSTITUTIONS = {
-    "AI":      "A I",
     "AMD":     "A M D",
     "capex":  "cap ex",
     "Epoch":   "E pok",
+    "ICLR":    "I C L R",
     "LLM":     "L L M",
+    "LLMs":     "L L M s",
     "METR":    "Meter",
     "pct":     "percent",
 }
