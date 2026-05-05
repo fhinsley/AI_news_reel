@@ -16,6 +16,7 @@ from pathlib import Path
 
 from config import (
     HEYGEN_API_BASE, HEYGEN_API_KEY,
+    HEYGEN_AVATAR_DIMENSION, HEYGEN_BACKGROUND_COLOR,
     STORIES_JSON, ANCHOR_JOBS_JSON, ANCHOR_CLIPS_DIR,
     ANCHORS, ANCHOR_LEAD,
 )
@@ -96,18 +97,22 @@ def build_heygen_payload(segment: dict) -> dict:
         "video_inputs": [
             {
                 "character": {
-                    "type":      "avatar",
-                    "avatar_id": segment["avatar_id"],
+                    "type":         "avatar",
+                    "avatar_id":    segment["avatar_id"],
                     "avatar_style": "normal",
                 },
                 "voice": {
-                    "type":     "text",
-                    "voice_id": segment["voice_id"],
+                    "type":       "text",
+                    "voice_id":   segment["voice_id"],
                     "input_text": segment["script"],
+                },
+                "background": {
+                    "type":  "color",
+                    "value": HEYGEN_BACKGROUND_COLOR,
                 },
             }
         ],
-        "dimension": {"width": 1920, "height": 1080},
+        "dimension": HEYGEN_AVATAR_DIMENSION,
         "test": False,
     }
 
@@ -166,14 +171,20 @@ def poll_and_download(jobs: dict) -> dict:
 
         for sid in pending:
             job = jobs[sid]
-            resp = requests.get(
-                f"{HEYGEN_API_BASE}/v1/video_status.get",
-                headers=HEADERS,
-                params={"video_id": job["job_id"]},
-                timeout=30,
-            )
+            try:
+                resp = requests.get(
+                    f"{HEYGEN_API_BASE}/v1/video_status.get",
+                    headers=HEADERS,
+                    params={"video_id": job["job_id"]},
+                    timeout=60,
+                )
+            except requests.exceptions.Timeout:
+                print(f"  attempt {attempt + 1}: poll timed out for {sid}, will retry next cycle.")
+                still_pending.append(sid)
+                continue
             if resp.status_code in (502, 503, 504):
                 print(f"  attempt {attempt + 1}: transient {resp.status_code}, retrying...")
+                still_pending.append(sid)
                 continue
             resp.raise_for_status()
             status_data = resp.json()["data"]

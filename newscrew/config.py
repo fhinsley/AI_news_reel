@@ -31,6 +31,10 @@ HEYGEN_API_KEY = os.environ.get("HEYGEN_API_KEY")
 if not HEYGEN_API_KEY:
     raise RuntimeError("HEYGEN_API_KEY environment variable is not set. Please configure your API key securely.")
 
+# HeyGen rendering settings — applied to every anchor clip submission
+HEYGEN_AVATAR_DIMENSION  = {"width": 720, "height": 1280}   # portrait — tall anchor, minimal wasted canvas
+HEYGEN_BACKGROUND_COLOR  = "#00FF00"                         # green screen for chroma key compositing
+
 # Anchor definitions — add/swap avatars here without touching pipeline code.
 # "seat" determines on-screen position and shot mode:
 #   "a" → left seat  → solo_a → ANCHOR_A_FRAME
@@ -93,31 +97,31 @@ SECTIONS = [
 
 # Anchor assignment: stories alternate A/B globally across all sections.
 # ANCHOR_LEAD is the anchor that reads the intro and outro.
-ANCHOR_LEAD = "Annie"
+ANCHOR_LEAD = "Saskia"
 
 # ── Video / compositor ─────────────────────────────────────────────────────────
 VIDEO_RESOLUTION = (1920, 1080)
 VIDEO_FPS        = 30
 SET_BACKGROUND_IMAGE = str(PROJECT_ROOT / "assets" / "set_background.jpg")
 
-# Anchor frame positions: (x, y, w, h) in pixels
+# Anchor frame positions: (x, y, w) in pixels
+# w controls the rendered width — height is derived automatically from clip aspect ratio.
 # Anchor A sits left-of-center; Anchor B sits right-of-center.
-ANCHOR_A_FRAME = (120,  200, 620, 720)   # left seat
-ANCHOR_B_FRAME = (1180, 200, 620, 720)   # right seat
-
+ANCHOR_A_FRAME = (600,  320, 250)   # left seat
+ANCHOR_B_FRAME = (1038, 315, 250)  # right seat
 # Pixels cropped from bottom of anchor clip to simulate desk occlusion.
 # Increase if the desk cuts higher into the anchor's torso.
-ANCHOR_CROP_BOTTOM = 160
-
+ANCHOR_CROP_BOTTOM = 30
 # Wall-mounted B-roll screen (center-back of set)
-WALL_SCREEN_FRAME = (660, 60, 600, 340)   # (x, y, w, h)
-
+WALL_SCREEN_FRAME = (640, 160, 657, 327)   # (x, y, w, h)
 # PiP anchor insert used in "broll" shot mode
-PIP_FRAME    = (40, 820, 340, 192)        # bottom-left corner
+PIP_FRAME    = (70, 70, 460, 240)        # bottom-left corner
 PIP_ANCHOR_ID = next(a["id"] for a in ANCHORS if a.get("seat") == "a")  # seat-a anchor in PiP
-
 # Lower-third bar
 LOWER_THIRD_FRAME          = (0, 900, 1920, 100)
+
+
+
 LOWER_THIRD_BG_COLOR       = [10, 30, 80]          # deep navy
 LOWER_THIRD_HEADLINE_COLOR = "white"
 LOWER_THIRD_SOURCE_COLOR   = "#AABBEE"

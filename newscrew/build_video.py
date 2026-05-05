@@ -53,6 +53,8 @@ import json
 import sys
 from pathlib import Path
 
+import numpy as np
+
 from moviepy import (
     VideoFileClip,
     ImageClip,
@@ -100,12 +102,12 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 # ── Geometry helpers ───────────────────────────────────────────────────────────
 
 def _frame_to_pos(frame: tuple) -> tuple:
-    """Convert (x, y, w, h) frame tuple to (x, y) position for with_position."""
+    """Return (x, y) position from frame tuple (works for both 3- and 4-value frames)."""
     return (frame[0], frame[1])
 
 
 def _frame_size(frame: tuple) -> tuple:
-    """Return (w, h) from (x, y, w, h) frame tuple."""
+    """Return (w, h) from (x, y, w, h) frame tuple. Only valid for fixed-size frames."""
     return (frame[2], frame[3])
 
 
@@ -152,22 +154,82 @@ def make_fallback_broll(duration: float, size: tuple) -> ColorClip:
 
 # ── Anchor clip compositing ────────────────────────────────────────────────────
 
+# Green screen color used in HeyGen rendering — must match what was set in HeyGen
+CHROMA_KEY_COLOR = np.array([0, 255, 0], dtype=np.float32)   # #00FF00
+CHROMA_TOLERANCE = 170   # increase if green fringe remains, decrease if spill bleeds in
+
+
+def remove_green_screen(clip: VideoFileClip) -> VideoFileClip:
+    """
+    Replace green screen pixels with transparency using a per-frame numpy mask.
+    Uses MoviePy 2.x image_transform API.
+    """
+    def chroma_key_frame(frame):
+        """Transform a single RGB frame into RGBA with green keyed out."""
+        f = frame.astype(np.float32)
+        diff  = np.linalg.norm(f - CHROMA_KEY_COLOR, axis=2)
+        alpha = np.where(diff < CHROMA_TOLERANCE, 0, 255).astype(np.uint8)
+        return np.dstack([frame, alpha])
+
+    return clip.image_transform(chroma_key_frame)
+
+
+def detect_content_box(clip: VideoFileClip) -> tuple:
+    """
+    Sample the middle frame and return (x1, y1, x2, y2) bounding box
+    of non-green content. Used to crop transparent padding after keying
+    so that position (fx, fy) places the top of the visible person,
+    not the top of the original clip canvas.
+    """
+    frame = clip.get_frame(clip.duration / 2).astype(np.float32)
+    rgb   = frame[:, :, :3]   # drop alpha channel if present
+    diff  = np.linalg.norm(rgb - CHROMA_KEY_COLOR, axis=2)
+    mask  = diff >= CHROMA_TOLERANCE
+    rows  = np.any(mask, axis=1)
+    cols  = np.any(mask, axis=0)
+    if not rows.any():
+        return (0, 0, clip.size[0], clip.size[1])
+    y1 = int(np.argmax(rows))
+    y2 = int(len(rows) - np.argmax(rows[::-1]))
+    x1 = int(np.argmax(cols))
+    x2 = int(len(cols) - np.argmax(cols[::-1]))
+    margin = 6
+    return (
+        max(0, x1 - margin),
+        max(0, y1 - margin),
+        min(clip.size[0], x2 + margin),
+        min(clip.size[1], y2 + margin),
+    )
+
+
 def _resize_and_crop_anchor(clip: VideoFileClip, frame: tuple) -> VideoFileClip:
     """
-    Resize anchor clip to fill frame width, then bottom-crop by ANCHOR_CROP_BOTTOM
-    pixels to simulate the anchor sitting behind the desk.
+    1. Remove green screen background
+    2. Crop transparent padding so (fx, fy) aligns to top of visible person
+    3. Resize to frame width, preserving aspect ratio
+    4. Crop bottom by ANCHOR_CROP_BOTTOM to simulate desk occlusion
+    5. Position at frame (x, y)
     """
-    fx, fy, fw, fh = frame
-    # Resize to frame width, preserve aspect
+    fx, fy, fw = frame
+
+    # Step 1 — remove green screen
+    clip = remove_green_screen(clip)
+
+    # Step 2 — crop transparent padding
+    x1, y1, x2, y2 = detect_content_box(clip)
+    clip = clip.with_effects([Crop(x1=x1, y1=y1, x2=x2, y2=y2)])
+
+    # Step 3 — scale to frame width, aspect ratio preserved
     clip = clip.with_effects([Resize(width=fw)])
-    # Crop bottom to hide below-desk portion
+
+    # Step 4 — crop bottom for desk occlusion
     if ANCHOR_CROP_BOTTOM > 0:
         clip_h = int(clip.size[1])
         crop_h = max(1, clip_h - ANCHOR_CROP_BOTTOM)
         clip = clip.with_effects([Crop(y1=0, y2=crop_h)])
-    # Resize again to exact frame height after crop
-    clip = clip.with_effects([Resize((fw, fh))])
-    return clip.with_position(_frame_to_pos(frame))
+
+    # Step 5 — place at frame position
+    return clip.with_position((fx, fy))
 
 
 def _dim_anchor(clip: VideoFileClip) -> VideoFileClip:
@@ -204,24 +266,25 @@ def build_anchor_layers(
 
     elif shot_mode == "solo_a":
         clip_a = _resize_and_crop_anchor(clip, ANCHOR_A_FRAME)
-        # Dimmed B: freeze first frame of A clip as a stand-in
-        clip_b = (
-            clip.with_end(1 / VIDEO_FPS)
-            .with_effects([Resize(_frame_size(ANCHOR_B_FRAME))])
-            .with_position(_frame_to_pos(ANCHOR_B_FRAME))
-            .with_duration(duration)
-        )
+        # Dimmed B: freeze first frame, key out green, crop padding, scale to B frame
+        clip_b = clip.with_end(1 / VIDEO_FPS).with_duration(duration)
+        clip_b = remove_green_screen(clip_b)
+        x1, y1, x2, y2 = detect_content_box(clip_b)
+        clip_b = clip_b.with_effects([Crop(x1=x1, y1=y1, x2=x2, y2=y2),
+                                      Resize(width=ANCHOR_B_FRAME[2])])
+        clip_b = clip_b.with_position(_frame_to_pos(ANCHOR_B_FRAME))
         clip_b = _dim_anchor(clip_b)
         return [clip_a, clip_b]
 
     elif shot_mode == "solo_b":
         clip_b = _resize_and_crop_anchor(clip, ANCHOR_B_FRAME)
-        clip_a = (
-            clip.with_end(1 / VIDEO_FPS)
-            .with_effects([Resize(_frame_size(ANCHOR_A_FRAME))])
-            .with_position(_frame_to_pos(ANCHOR_A_FRAME))
-            .with_duration(duration)
-        )
+        # Dimmed A: freeze first frame, key out green, crop padding, scale to A frame
+        clip_a = clip.with_end(1 / VIDEO_FPS).with_duration(duration)
+        clip_a = remove_green_screen(clip_a)
+        x1, y1, x2, y2 = detect_content_box(clip_a)
+        clip_a = clip_a.with_effects([Crop(x1=x1, y1=y1, x2=x2, y2=y2),
+                                      Resize(width=ANCHOR_A_FRAME[2])])
+        clip_a = clip_a.with_position(_frame_to_pos(ANCHOR_A_FRAME))
         clip_a = _dim_anchor(clip_a)
         return [clip_b, clip_a]
 
