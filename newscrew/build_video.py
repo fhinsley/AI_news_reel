@@ -95,6 +95,10 @@ from config import (
 W, H = VIDEO_RESOLUTION
 ANCHOR_LOOKUP = {a["id"]: a for a in ANCHORS}
 
+# HeyGen clip canvas dimensions — used for placeholder aspect-ratio estimation
+CONTENT_W = 708
+CONTENT_H = 896
+
 # File extensions treated as still images rather than video clips
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
@@ -237,28 +241,119 @@ def _dim_anchor(clip: VideoFileClip) -> VideoFileClip:
     return clip.with_opacity(0.35)
 
 
+def _find_standin_clip(inactive_anchor_id: str, all_segments: list) -> str | None:
+    """
+    Scan all_segments for any clip that belongs to inactive_anchor_id.
+    Returns the first valid clip path found, or None.
+
+    Looks up the seat for inactive_anchor_id in ANCHOR_LOOKUP to confirm
+    we're pulling from the right anchor, not just any available clip.
+    """
+    for seg in all_segments:
+        if seg.get("anchor_id") == inactive_anchor_id:
+            p = seg.get("anchor_clip")
+            if p and Path(p).exists():
+                return p
+    return None
+
+
+def _make_standin(
+    frame: tuple,
+    duration: float,
+    clip_path: str | None,
+    dim: bool = True,
+) -> VideoFileClip | ColorClip:
+    """
+    Build the dimmed frozen stand-in for the inactive anchor seat.
+
+    If clip_path is provided (and exists), freeze its first frame, key out
+    green, crop padding, resize to frame width, and dim to 0.35 opacity.
+
+    If clip_path is None or missing, return a neutral dark placeholder
+    ColorClip sized to the expected rendered dimensions (approximate).
+    """
+    fw = frame[2]
+
+    if clip_path and Path(clip_path).exists():
+        raw = load_anchor_clip(clip_path, target_duration=None)
+        # Extract a true numpy still — ImageClip is guaranteed motionless.
+        # A VideoFileClip "frozen" with with_end(1/fps) can still animate
+        # when composited, so we pull the frame array and discard the clip.
+        still_rgb = raw.get_frame(0)   # H×W×3 uint8
+        raw.close()
+
+        # Chroma-key directly on the numpy array
+        f     = still_rgb.astype(np.float32)
+        diff  = np.linalg.norm(f - CHROMA_KEY_COLOR, axis=2)
+        alpha = np.where(diff < CHROMA_TOLERANCE, 0, 255).astype(np.uint8)
+        still_rgba = np.dstack([still_rgb, alpha])   # H×W×4
+
+        # Crop transparent padding from the still
+        mask = diff >= CHROMA_TOLERANCE
+        rows = np.any(mask, axis=1)
+        cols = np.any(mask, axis=0)
+        if rows.any():
+            margin = 6
+            y1 = max(0, int(np.argmax(rows)) - margin)
+            y2 = min(still_rgba.shape[0], int(still_rgba.shape[0] - np.argmax(rows[::-1])) + margin)
+            x1 = max(0, int(np.argmax(cols)) - margin)
+            x2 = min(still_rgba.shape[1], int(still_rgba.shape[1] - np.argmax(cols[::-1])) + margin)
+            still_rgba = still_rgba[y1:y2, x1:x2]
+
+        frozen = (
+            ImageClip(still_rgba, is_mask=False)
+            .with_duration(duration)
+            .with_effects([Resize(width=fw)])
+        )
+        if ANCHOR_CROP_BOTTOM > 0:
+            frozen_h = int(frozen.size[1])
+            crop_h = max(1, frozen_h - ANCHOR_CROP_BOTTOM)
+            frozen = frozen.with_effects([Crop(y1=0, y2=crop_h)])
+        frozen = frozen.with_position(_frame_to_pos(frame))
+        return _dim_anchor(frozen) if dim else frozen
+    else:
+        # No clip available — neutral dark placeholder sized to approximate anchor height
+        placeholder_h = int(fw * (CONTENT_H / max(CONTENT_W, 1)))
+        placeholder = ColorClip(
+            size=(fw, placeholder_h),
+            color=[20, 22, 28],
+            duration=duration,
+        ).with_position(_frame_to_pos(frame))
+        return placeholder
+
+
 def build_anchor_layers(
     shot_mode: str,
     anchor_id: str,
     anchor_clip_path: str | Path,
     duration: float,
+    all_segments: list | None = None,
 ) -> list:
     """
     Return a list of positioned anchor VideoFileClip layers for this segment.
 
     wide    → A at ANCHOR_A_FRAME, B at ANCHOR_B_FRAME (both full opacity)
-              NOTE: wide mode requires both anchor clips; in practice the speaking
-              anchor's clip is used for both positions in the current single-clip
-              pipeline. When dual-clip wide shots are supported, extend this function
-              to accept anchor_clip_b_path.
+              NOTE: wide mode uses the same clip at both positions until
+              dual-clip wide shots are supported.
 
-    solo_a  → A at ANCHOR_A_FRAME full, B position dimmed static frame
-    solo_b  → B at ANCHOR_B_FRAME full, A position dimmed static frame
+    solo_a  → A at ANCHOR_A_FRAME full opacity
+               B seat: frozen first frame of the seat-b anchor's own clip (dimmed),
+               looked up from all_segments. Falls back to dark placeholder.
+
+    solo_b  → B at ANCHOR_B_FRAME full opacity
+               A seat: frozen first frame of the seat-a anchor's own clip (dimmed),
+               looked up from all_segments. Falls back to dark placeholder.
+
+    Parameters
+    ----------
+    all_segments : list, optional
+        Full list of segment dicts from the shot plan. Used to locate a clip
+        for the inactive anchor's stand-in. Pass None to skip (placeholder used).
     """
     clip = load_anchor_clip(anchor_clip_path, target_duration=duration)
 
     if shot_mode == "wide":
-        # Use the same clip mirrored to both positions (single-clip wide shot).
+        # Use the same clip at both positions (single-clip wide shot).
         # TODO: replace with distinct A/B clips when both are available.
         clip_a = _resize_and_crop_anchor(clip, ANCHOR_A_FRAME)
         clip_b = _resize_and_crop_anchor(clip, ANCHOR_B_FRAME)
@@ -266,26 +361,30 @@ def build_anchor_layers(
 
     elif shot_mode == "solo_a":
         clip_a = _resize_and_crop_anchor(clip, ANCHOR_A_FRAME)
-        # Dimmed B: freeze first frame, key out green, crop padding, scale to B frame
-        clip_b = clip.with_end(1 / VIDEO_FPS).with_duration(duration)
-        clip_b = remove_green_screen(clip_b)
-        x1, y1, x2, y2 = detect_content_box(clip_b)
-        clip_b = clip_b.with_effects([Crop(x1=x1, y1=y1, x2=x2, y2=y2),
-                                      Resize(width=ANCHOR_B_FRAME[2])])
-        clip_b = clip_b.with_position(_frame_to_pos(ANCHOR_B_FRAME))
-        clip_b = _dim_anchor(clip_b)
+
+        # Inactive seat: find seat-b anchor's own clip for a proper stand-in
+        seat_b_id = next(
+            (a["id"] for a in ANCHORS if a.get("seat") == "b"),
+            None,
+        )
+        standin_path = _find_standin_clip(seat_b_id, all_segments or []) if seat_b_id else None
+        if standin_path is None:
+            print(f"    INFO: no clip found for seat-b anchor ({seat_b_id!r}) — using dark placeholder")
+        clip_b = _make_standin(ANCHOR_B_FRAME, duration, standin_path, dim=False)
         return [clip_a, clip_b]
 
     elif shot_mode == "solo_b":
         clip_b = _resize_and_crop_anchor(clip, ANCHOR_B_FRAME)
-        # Dimmed A: freeze first frame, key out green, crop padding, scale to A frame
-        clip_a = clip.with_end(1 / VIDEO_FPS).with_duration(duration)
-        clip_a = remove_green_screen(clip_a)
-        x1, y1, x2, y2 = detect_content_box(clip_a)
-        clip_a = clip_a.with_effects([Crop(x1=x1, y1=y1, x2=x2, y2=y2),
-                                      Resize(width=ANCHOR_A_FRAME[2])])
-        clip_a = clip_a.with_position(_frame_to_pos(ANCHOR_A_FRAME))
-        clip_a = _dim_anchor(clip_a)
+
+        # Inactive seat: find seat-a anchor's own clip for a proper stand-in
+        seat_a_id = next(
+            (a["id"] for a in ANCHORS if a.get("seat") == "a"),
+            None,
+        )
+        standin_path = _find_standin_clip(seat_a_id, all_segments or []) if seat_a_id else None
+        if standin_path is None:
+            print(f"    INFO: no clip found for seat-a anchor ({seat_a_id!r}) — using dark placeholder")
+        clip_a = _make_standin(ANCHOR_A_FRAME, duration, standin_path, dim=False)
         return [clip_b, clip_a]
 
     elif shot_mode == "broll":
@@ -418,7 +517,7 @@ def load_background(duration: float) -> ImageClip | ColorClip:
 
 # ── Single segment compositor ──────────────────────────────────────────────────
 
-def composite_segment(seg: dict) -> CompositeVideoClip | None:
+def composite_segment(seg: dict, all_segments: list | None = None) -> CompositeVideoClip | None:
     """
     Build one CompositeVideoClip for a single shot plan segment.
     Returns None if the anchor clip is missing (segment not yet rendered).
@@ -450,7 +549,7 @@ def composite_segment(seg: dict) -> CompositeVideoClip | None:
     broll = build_broll_layer(shot_mode, broll_path, duration)
 
     # Layer 3 — anchor(s)
-    anchor_layers = build_anchor_layers(shot_mode, seg.get("anchor_id", ""), anchor_clip_path, duration)
+    anchor_layers = build_anchor_layers(shot_mode, seg.get("anchor_id", ""), anchor_clip_path, duration, all_segments=all_segments)
 
     # Layer 4 — PiP (broll mode only)
     pip_layers = []
@@ -574,7 +673,7 @@ def main():
 
     clips_meta = []
     for seg in plan["segments"]:
-        comp = composite_segment(seg)
+        comp = composite_segment(seg, all_segments=plan["segments"])
         if comp is None:
             continue
         t_in  = seg.get("transition_in",  "cut")
