@@ -7,8 +7,13 @@ Each frame is drawn as a labeled colored rectangle:
     - ANCHOR_A_FRAME      green  — left seat anchor position
     - ANCHOR_B_FRAME      cyan   — right seat anchor position
     - ANCHOR_CROP_BOTTOM  red    — crop line across each anchor frame
+    - ANCHOR_SOLO_CROP_BOTTOM red    — crop line for solo anchor frames (if different)
     - WALL_SCREEN_FRAME   yellow — b-roll wall screen
-    - PIP_FRAME           orange — picture-in-picture insert
+    - ANCHOR_A_SOLOFRAME  grey  — left seat anchor position
+    - ANCHOR_VIDEO_FRAME  blue  — left seat anchor position
+    - ANCHOR_B_SOLOFRAME  grey   — right seat anchor position
+    - SOLO_A_LOWER_THIRD_FRAME   blue   — lower third bar for solo anchor A
+    - SOLO_B_LOWER_THIRD_FRAME   blue   — lower third
     - LOWER_THIRD_FRAME   blue   — lower third bar
 
 Output saved to: assets/layout_preview.jpg
@@ -31,11 +36,16 @@ from config import (
     PROJECT_ROOT,
     SET_BACKGROUND_IMAGE,
     VIDEO_RESOLUTION,
+    SOLO_A_LOWER_THIRD_FRAME,
+    SOLO_B_LOWER_THIRD_FRAME,
     ANCHOR_A_FRAME,
     ANCHOR_B_FRAME,
     ANCHOR_CROP_BOTTOM,
+    ANCHOR_SOLO_CROP_BOTTOM,
     WALL_SCREEN_FRAME,
-    PIP_FRAME,
+    ANCHOR_A_SOLOFRAME,
+    # ANCHOR_VIDEO_FRAME,
+    ANCHOR_B_SOLOFRAME,
     LOWER_THIRD_FRAME,
 )
 
@@ -59,8 +69,13 @@ def anchor_rendered_size(frame_w: int) -> tuple:
 # ── Frame definitions ──────────────────────────────────────────────────────────
 FRAMES = [
     (WALL_SCREEN_FRAME,   "#FFE600", "WALL_SCREEN_FRAME"),
-    (PIP_FRAME,           "#FF8800", "PIP_FRAME"),
     (LOWER_THIRD_FRAME,   "#4488FF", "LOWER_THIRD_FRAME"),
+    (ANCHOR_A_SOLOFRAME,  "#888888", "ANCHOR_A_SOLOFRAME"),
+    # (ANCHOR_VIDEO_FRAME,  "#cc0000", "ANCHOR_VIDEO_FRAME"),
+    (ANCHOR_B_SOLOFRAME,  "#888888", "ANCHOR_B_SOLOFRAME"),
+    (SOLO_A_LOWER_THIRD_FRAME, "#1552BC", "SOLO_A_LOWER_THIRD_FRAME"),
+    (SOLO_B_LOWER_THIRD_FRAME, "#1552BC", "SOLO_B_LOWER_THIRD_FRAME"),
+ 
 ]
 
 
@@ -152,8 +167,14 @@ def main():
     print(f"  ANCHOR_A_FRAME     = {ANCHOR_A_FRAME}")
     print(f"  ANCHOR_B_FRAME     = {ANCHOR_B_FRAME}")
     print(f"  ANCHOR_CROP_BOTTOM = {ANCHOR_CROP_BOTTOM}")
+    print(f"  ANCHOR_SOLO_CROP_BOTTOM = {ANCHOR_SOLO_CROP_BOTTOM}")
     print(f"  WALL_SCREEN_FRAME  = {WALL_SCREEN_FRAME}")
-    print(f"  PIP_FRAME          = {PIP_FRAME}")
+    print(f"  ANCHOR_A_SOLOFRAME = {ANCHOR_A_SOLOFRAME}")
+
+    # print(f"  ANCHOR_VIDEO_FRAME = {ANCHOR_VIDEO_FRAME}")
+    print(f"  ANCHOR_B_SOLOFRAME = {ANCHOR_B_SOLOFRAME}")
+    print(f"  SOLO_A_LOWER_THIRD_FRAME = {SOLO_A_LOWER_THIRD_FRAME}")
+    print(f"  SOLO_B_LOWER_THIRD_FRAME = {SOLO_B_LOWER_THIRD_FRAME}")
     print(f"  LOWER_THIRD_FRAME  = {LOWER_THIRD_FRAME}")
 
 

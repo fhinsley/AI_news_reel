@@ -76,9 +76,14 @@ from config import (
     SET_BACKGROUND_IMAGE,
     ANCHOR_A_FRAME,
     ANCHOR_B_FRAME,
+    ANCHOR_A_SOLOFRAME,
+    ANCHOR_B_SOLOFRAME,
+    # ANCHOR_VIDEO_FRAME,
     ANCHOR_CROP_BOTTOM,
+    ANCHOR_SOLO_CROP_BOTTOM,
+    SOLO_A_LOWER_THIRD_FRAME,
+    SOLO_B_LOWER_THIRD_FRAME,
     WALL_SCREEN_FRAME,
-    PIP_FRAME,
     PIP_ANCHOR_ID,
     LOWER_THIRD_FRAME,
     LOWER_THIRD_BG_COLOR,
@@ -206,15 +211,17 @@ def detect_content_box(clip: VideoFileClip) -> tuple:
     )
 
 
-def _resize_and_crop_anchor(clip: VideoFileClip, frame: tuple) -> VideoFileClip:
+def _resize_and_crop_anchor(clip: VideoFileClip, frame: tuple, crop_bottom: int | None = None) -> VideoFileClip:
     """
     1. Remove green screen background
     2. Crop transparent padding so (fx, fy) aligns to top of visible person
     3. Resize to frame width, preserving aspect ratio
-    4. Crop bottom by ANCHOR_CROP_BOTTOM to simulate desk occlusion
+    4. Crop bottom to simulate desk occlusion.
+       Uses crop_bottom if provided, otherwise ANCHOR_CROP_BOTTOM.
     5. Position at frame (x, y)
     """
     fx, fy, fw = frame
+    effective_crop = crop_bottom if crop_bottom is not None else ANCHOR_CROP_BOTTOM
 
     # Step 1 — remove green screen
     clip = remove_green_screen(clip)
@@ -227,9 +234,9 @@ def _resize_and_crop_anchor(clip: VideoFileClip, frame: tuple) -> VideoFileClip:
     clip = clip.with_effects([Resize(width=fw)])
 
     # Step 4 — crop bottom for desk occlusion
-    if ANCHOR_CROP_BOTTOM > 0:
+    if effective_crop > 0:
         clip_h = int(clip.size[1])
-        crop_h = max(1, clip_h - ANCHOR_CROP_BOTTOM)
+        crop_h = max(1, clip_h - effective_crop)
         clip = clip.with_effects([Crop(y1=0, y2=crop_h)])
 
     # Step 5 — place at frame position
@@ -262,6 +269,7 @@ def _make_standin(
     duration: float,
     clip_path: str | None,
     dim: bool = True,
+    crop_bottom: int | None = None,
 ) -> VideoFileClip | ColorClip:
     """
     Build the dimmed frozen stand-in for the inactive anchor seat.
@@ -305,9 +313,10 @@ def _make_standin(
             .with_duration(duration)
             .with_effects([Resize(width=fw)])
         )
-        if ANCHOR_CROP_BOTTOM > 0:
+        effective_crop = crop_bottom if crop_bottom is not None else ANCHOR_CROP_BOTTOM
+        if effective_crop > 0:
             frozen_h = int(frozen.size[1])
-            crop_h = max(1, frozen_h - ANCHOR_CROP_BOTTOM)
+            crop_h = max(1, frozen_h - effective_crop)
             frozen = frozen.with_effects([Crop(y1=0, y2=crop_h)])
         frozen = frozen.with_position(_frame_to_pos(frame))
         return _dim_anchor(frozen) if dim else frozen
@@ -360,9 +369,7 @@ def build_anchor_layers(
         return [clip_a, clip_b]
 
     elif shot_mode == "solo_a":
-        clip_a = _resize_and_crop_anchor(clip, ANCHOR_A_FRAME)
-
-        # Inactive seat: find seat-b anchor's own clip for a proper stand-in
+        clip_a = _resize_and_crop_anchor(clip, ANCHOR_A_FRAME, crop_bottom=ANCHOR_SOLO_CROP_BOTTOM)
         seat_b_id = next(
             (a["id"] for a in ANCHORS if a.get("seat") == "b"),
             None,
@@ -370,13 +377,11 @@ def build_anchor_layers(
         standin_path = _find_standin_clip(seat_b_id, all_segments or []) if seat_b_id else None
         if standin_path is None:
             print(f"    INFO: no clip found for seat-b anchor ({seat_b_id!r}) — using dark placeholder")
-        clip_b = _make_standin(ANCHOR_B_FRAME, duration, standin_path, dim=False)
+        clip_b = _make_standin(ANCHOR_B_FRAME, duration, standin_path, dim=False, crop_bottom=ANCHOR_SOLO_CROP_BOTTOM)
         return [clip_a, clip_b]
 
     elif shot_mode == "solo_b":
-        clip_b = _resize_and_crop_anchor(clip, ANCHOR_B_FRAME)
-
-        # Inactive seat: find seat-a anchor's own clip for a proper stand-in
+        clip_b = _resize_and_crop_anchor(clip, ANCHOR_B_FRAME, crop_bottom=ANCHOR_SOLO_CROP_BOTTOM)
         seat_a_id = next(
             (a["id"] for a in ANCHORS if a.get("seat") == "a"),
             None,
@@ -384,7 +389,7 @@ def build_anchor_layers(
         standin_path = _find_standin_clip(seat_a_id, all_segments or []) if seat_a_id else None
         if standin_path is None:
             print(f"    INFO: no clip found for seat-a anchor ({seat_a_id!r}) — using dark placeholder")
-        clip_a = _make_standin(ANCHOR_A_FRAME, duration, standin_path, dim=False)
+        clip_a = _make_standin(ANCHOR_A_FRAME, duration, standin_path, dim=False, crop_bottom=ANCHOR_SOLO_CROP_BOTTOM)
         return [clip_b, clip_a]
 
     elif shot_mode == "broll":
@@ -395,33 +400,82 @@ def build_anchor_layers(
         raise ValueError(f"Unknown shot_mode: {shot_mode!r}")
 
 
-# ── B-roll layer ───────────────────────────────────────────────────────────────
+# ── Wall screen / B-roll layer ─────────────────────────────────────────────────
 
-def build_broll_layer(
-    shot_mode: str,
+# Grid layout: 3 columns × 2 rows across WALL_SCREEN_FRAME
+WALL_GRID_COLS = 3
+WALL_GRID_ROWS = 2
+# Active media cell: lower-center (col=1, row=1, zero-indexed)
+WALL_ACTIVE_COL = 1
+WALL_ACTIVE_ROW = 1
+
+
+def build_wall_screen(
+    broll_clip_path: str | Path | None,
+    duration: float,
+    default_image_path: str | Path | None = None,
+) -> CompositeVideoClip:
+    """
+    Composite the wall screen area.
+
+    The default image (logo/static) fills the entire WALL_SCREEN_FRAME as a
+    background. When a b-roll asset is available, the lower-center cell of a
+    3×2 grid is composited on top — the rest of the default image shows through
+    unchanged, exactly like the inactive anchor stand-in approach.
+
+    If no default image is available, a dark ColorClip is used as the base.
+    """
+    wx, wy, ww, wh = WALL_SCREEN_FRAME
+    gap = 2
+
+    cell_w = (ww - gap * (WALL_GRID_COLS - 1)) // WALL_GRID_COLS
+    cell_h = (wh - gap * (WALL_GRID_ROWS - 1)) // WALL_GRID_ROWS
+
+    # Layer 1 — default image covers the full wall area
+    if default_image_path and Path(default_image_path).exists():
+        try:
+            base = (
+                ImageClip(str(default_image_path))
+                .with_duration(duration)
+                .with_effects([Resize((ww, wh))])
+                .with_position((0, 0))
+            )
+        except Exception as e:
+            print(f"  WARNING: wall screen default image failed to load: {e}")
+            base = ColorClip(size=(ww, wh), color=[18, 22, 30], duration=duration).with_position((0, 0))
+    else:
+        base = ColorClip(size=(ww, wh), color=[18, 22, 30], duration=duration).with_position((0, 0))
+
+    layers = [base]
+
+    # Layer 2 — active media cell composited on top when b-roll is available
+    if broll_clip_path and Path(broll_clip_path).exists():
+        try:
+            cx = WALL_ACTIVE_COL * (cell_w + gap)
+            cy = WALL_ACTIVE_ROW * (cell_h + gap)
+            active_clip = (
+                load_broll_clip(broll_clip_path, duration)
+                .with_effects([Resize((cell_w, cell_h))])
+                .with_position((cx, cy))
+            )
+            layers.append(active_clip)
+        except Exception as e:
+            print(f"  WARNING: wall screen active media failed to load: {e}")
+
+    wall = CompositeVideoClip(layers, size=(ww, wh)).with_duration(duration)
+    return wall.with_position((wx, wy))
+
+
+def build_broll_fullscreen(
     broll_clip_path: str | Path | None,
     duration: float,
 ) -> VideoFileClip | ColorClip:
-    """
-    Return the B-roll clip positioned and sized for the current shot mode.
-
-    wide / solo_*  → B-roll confined to WALL_SCREEN_FRAME (wall-mounted screen)
-    broll          → B-roll fills full frame (W × H)
-    """
-    if shot_mode == "broll":
-        target_size = (W, H)
-        pos = (0, 0)
-    else:
-        target_size = _frame_size(WALL_SCREEN_FRAME)
-        pos = _frame_to_pos(WALL_SCREEN_FRAME)
-
+    """Full-frame B-roll for 'broll' shot mode only."""
     if broll_clip_path and Path(broll_clip_path).exists():
         clip = load_broll_clip(broll_clip_path, duration)
-        clip = clip.with_effects([Resize(target_size)])
+        return clip.with_effects([Resize((W, H))]).with_position((0, 0))
     else:
-        clip = make_fallback_broll(duration, target_size)
-
-    return clip.with_position(pos)
+        return make_fallback_broll(duration, (W, H)).with_position((0, 0))
 
 
 # ── PiP anchor layer (broll mode only) ────────────────────────────────────────
@@ -450,18 +504,29 @@ def build_lower_third(
     headline: str | None,
     source: str | None,
     duration: float,
+    frame: tuple | None = None,
 ) -> CompositeVideoClip | None:
     """
     Returns a CompositeVideoClip of the lower-third bar + text, or None if
     both headline and source are absent.
 
-    Layout (relative to LOWER_THIRD_FRAME):
+    frame: (x, y, w, h) — defaults to LOWER_THIRD_FRAME. Pass
+    SOLO_A_LOWER_THIRD_FRAME or SOLO_B_LOWER_THIRD_FRAME for solo shots.
+
+    Layout (relative to frame):
         [  HEADLINE TEXT                         SOURCE  ]
     """
     if not headline and not source:
         return None
 
-    lx, ly, lw, lh = LOWER_THIRD_FRAME
+    lx, ly, lw, lh = frame if frame is not None else LOWER_THIRD_FRAME
+
+    # Scale font sizes proportionally to frame height so solo lower thirds
+    # (which are shorter than the full-width bar) render legible text.
+    ref_h = LOWER_THIRD_FRAME[3]   # reference height — full-width bar
+    scale = lh / ref_h
+    headline_size = max(10, int(LOWER_THIRD_HEADLINE_SIZE * scale))
+    source_size   = max(8,  int(LOWER_THIRD_SOURCE_SIZE   * scale))
 
     # Background bar
     bg = ColorClip(size=(lw, lh), color=LOWER_THIRD_BG_COLOR, duration=duration)
@@ -473,12 +538,12 @@ def build_lower_third(
             hl = TextClip(
                 font=LOWER_THIRD_FONT,
                 text=headline,
-                font_size=LOWER_THIRD_HEADLINE_SIZE,
+                font_size=headline_size,
                 color=LOWER_THIRD_HEADLINE_COLOR,
                 bg_color=None,
                 transparent=True,
                 duration=duration,
-            ).with_position((16, (lh - LOWER_THIRD_HEADLINE_SIZE) // 2))
+            ).with_position((16, (lh - headline_size) // 2))
             layers.append(hl)
         except Exception as e:
             print(f"  WARNING: lower-third headline render failed: {e}")
@@ -489,12 +554,12 @@ def build_lower_third(
             src = TextClip(
                 font=LOWER_THIRD_FONT,
                 text=source.upper(),
-                font_size=LOWER_THIRD_SOURCE_SIZE,
+                font_size=source_size,
                 color=LOWER_THIRD_SOURCE_COLOR,
                 bg_color=None,
                 transparent=True,
                 duration=duration,
-            ).with_position((lw - 200, (lh - LOWER_THIRD_SOURCE_SIZE) // 2))
+            ).with_position((lw - 200, (lh - source_size) // 2))
             layers.append(src)
         except Exception as e:
             print(f"  WARNING: lower-third source render failed: {e}")
@@ -545,23 +610,53 @@ def composite_segment(seg: dict, all_segments: list | None = None) -> CompositeV
     # Layer 1 — background
     bg = load_background(duration)
 
-    # Layer 2 — B-roll
-    broll = build_broll_layer(shot_mode, broll_path, duration)
+    # Layer 2 — B-roll / wall screen
+    wall_default = PROJECT_ROOT / "assets" / "wall_default.jpg"
+    if shot_mode == "broll":
+        broll = build_broll_fullscreen(broll_path, duration)
+    else:
+        broll = build_wall_screen(broll_path, duration, default_image_path=wall_default)
 
     # Layer 3 — anchor(s)
     anchor_layers = build_anchor_layers(shot_mode, seg.get("anchor_id", ""), anchor_clip_path, duration, all_segments=all_segments)
 
     # Layer 4 — PiP (broll mode only)
-    pip_layers = []
-    if shot_mode == "broll" and anchor_clip_path:
-        pip_layers = [build_pip_layer(anchor_clip_path, duration)]
+    # pip_layers = []
+    # if shot_mode == "broll" and anchor_clip_path:
+    #     pip_layers = [build_pip_layer(anchor_clip_path, duration)]
 
     # Layer 5 — lower third
-    lt = build_lower_third(headline, source, duration)
+    if shot_mode == "solo_a":
+        lt_frame = SOLO_A_LOWER_THIRD_FRAME
+    elif shot_mode == "solo_b":
+        lt_frame = SOLO_B_LOWER_THIRD_FRAME
+    else:
+        lt_frame = None   # defaults to LOWER_THIRD_FRAME
+    lt = build_lower_third(headline, source, duration, frame=lt_frame)
     lt_layers = [lt] if lt else []
 
-    all_layers = [bg, broll] + anchor_layers + pip_layers + lt_layers
-    return CompositeVideoClip(all_layers, size=(W, H)).with_duration(duration)
+    all_layers = [bg, broll] + anchor_layers + lt_layers
+    comp = CompositeVideoClip(all_layers, size=(W, H)).with_duration(duration)
+
+    # ── Solo viewfinder crop ───────────────────────────────────────────────────
+    # Crop a sub-rectangle of the full canvas and scale up to fill output frame.
+    # Using image_transform on the composite is the reliable MoviePy 2.x approach —
+    # with_effects([Crop, Resize]) on a CompositeVideoClip is not always honoured.
+    if shot_mode in ("solo_a", "solo_b"):
+        sf = ANCHOR_A_SOLOFRAME if shot_mode == "solo_a" else ANCHOR_B_SOLOFRAME
+        sx, sy, sw, sh = sf
+
+        def _crop_and_scale(frame):
+            """Crop solo window from full canvas frame and scale to output resolution."""
+            cropped = frame[sy:sy+sh, sx:sx+sw]          # H×W×3 numpy slice
+            from PIL import Image as _Image
+            pil = _Image.fromarray(cropped)
+            pil = pil.resize((W, H), _Image.LANCZOS)
+            return np.array(pil)
+
+        comp = comp.image_transform(_crop_and_scale)
+
+    return comp
 
 
 # ── Transition handling ────────────────────────────────────────────────────────

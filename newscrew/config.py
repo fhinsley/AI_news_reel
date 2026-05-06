@@ -107,17 +107,24 @@ SET_BACKGROUND_IMAGE = str(PROJECT_ROOT / "assets" / "set_background.jpg")
 # Anchor frame positions: (x, y, w) in pixels
 # w controls the rendered width — height is derived automatically from clip aspect ratio.
 # Anchor A sits left-of-center; Anchor B sits right-of-center.
-ANCHOR_A_FRAME = (600,  320, 250)   # left seat
-ANCHOR_B_FRAME = (1038, 315, 250)  # right seat
+SOLO_A_LOWER_THIRD_FRAME = (290, 600, 710, 40)
+SOLO_B_LOWER_THIRD_FRAME = (920, 600, 710, 40)
+ANCHOR_A_FRAME = (515,  320, 250)   # left seat
+ANCHOR_B_FRAME = (1155, 315, 250)  # right seat
+ANCHOR_A_SOLOFRAME = (290, 260, 710, 399)   # full-left for solo shots
+ANCHOR_B_SOLOFRAME = (920, 260, 710, 399)   # full-right for solo shots
+ANCHOR_VIDEO_FRAME = (850, 300, 192, 140)   # full-left for solo shots (same as solo frame for now)
 # Pixels cropped from bottom of anchor clip to simulate desk occlusion.
 # Increase if the desk cuts higher into the anchor's torso.
 ANCHOR_CROP_BOTTOM = 30
+ANCHOR_SOLO_CROP_BOTTOM = 35
 # Wall-mounted B-roll screen (center-back of set)
 WALL_SCREEN_FRAME = (640, 160, 657, 327)   # (x, y, w, h)
 # PiP anchor insert used in "broll" shot mode
-PIP_FRAME    = (70, 70, 460, 240)        # bottom-left corner
+PIP_FRAME    = (200, 250, 330, 220)        # bottom-left corner
 PIP_ANCHOR_ID = next(a["id"] for a in ANCHORS if a.get("seat") == "a")  # seat-a anchor in PiP
 # Lower-third bar
+
 LOWER_THIRD_FRAME          = (0, 900, 1920, 100)
 
 
