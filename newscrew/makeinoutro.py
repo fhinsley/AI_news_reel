@@ -1,22 +1,34 @@
 #!/usr/bin/env python3
+"""
+makeinoutro.py — Generate intro and outro MP3 clips for the current episode
+using ElevenLabs TTS.
+
+Output files:
+    episodes/<EPISODE_DIR>/intro.mp3
+    episodes/<EPISODE_DIR>/close.mp3
+
+These paths are read by build_video.py via INTRO_AUDIO_CLIP / CLOSE_AUDIO_CLIP
+in config.py. Run this script once per episode (or whenever the intro/outro
+copy changes) before running build_video.py.
+
+Usage:
+    python makeinoutro.py
+"""
 
 import base64
 import json
 from pathlib import Path
+
 from elevenlabs.client import ElevenLabs
 import config
 
-PAUSE = '<break time="1s" />'
-
-# ---------------------------------------------------------------------------
-# ElevenLabs client
-# ---------------------------------------------------------------------------
+# ── ElevenLabs client ──────────────────────────────────────────────────────────
 client = ElevenLabs(api_key=config.ELEVENLABS_API_KEY)
 
+
+# ── Date helpers ───────────────────────────────────────────────────────────────
+
 def spoken_day(day_of_month: int) -> str:
-    """Convert a day of month to spoken ordinal form.
-    e.g. 1 -> 'first', 30 -> 'thirtieth'
-    """
     ordinals = {
         1:"first", 2:"second", 3:"third", 4:"fourth", 5:"fifth",
         6:"sixth", 7:"seventh", 8:"eighth", 9:"ninth", 10:"tenth",
@@ -31,9 +43,6 @@ def spoken_day(day_of_month: int) -> str:
 
 
 def spoken_year(yyyy: int) -> str:
-    """Convert a year to fully spoken form.
-    e.g. 2026 -> 'twenty twenty-six'
-    """
     tens_words = {
         0:"", 1:"ten", 2:"twenty", 3:"thirty", 4:"forty", 5:"fifty",
         6:"sixty", 7:"seventy", 8:"eighty", 9:"ninety"
@@ -47,12 +56,10 @@ def spoken_year(yyyy: int) -> str:
     }
     century   = yyyy // 100
     remainder = yyyy % 100
-
     century_spoken = tens_words[century // 10]
     if century % 10:
         century_spoken += f" {ones_words[century % 10]}"
     century_spoken = century_spoken.strip()
-
     if remainder == 0:
         return f"{century_spoken} hundred"
     elif remainder < 20:
@@ -67,25 +74,25 @@ def spoken_year(yyyy: int) -> str:
 
 
 def spoken_date(dt) -> str:
-    """Convert a date to fully spoken form.
-    e.g. datetime(2026, 3, 30) -> 'March thirtieth'
-    """
     return f"{dt.strftime('%B')} {spoken_day(dt.day)}"
 
-from datetime import datetime, timedelta
-_end   = datetime.today() - timedelta(days=1)
-_start = _end - timedelta(days=7)
+
+# ── Date range from config (stays in sync with episode) ───────────────────────
+_end        = config.END_DATE
+_start      = config.START_DATE
 _date_range = f"{spoken_date(_start)} through {spoken_date(_end)}, {spoken_year(_end.year)}"
 
+# ── Resolve on-air anchor names from config ────────────────────────────────────
+_seat_a = next((a["id"] for a in config.ANCHORS if a.get("seat") == "a"), "Saskia")
+_seat_b = next((a["id"] for a in config.ANCHORS if a.get("seat") == "b"), "Albert")
 
-# ---------------------------------------------------------------------------
-# Placeholder anchor copy — replace with real text when ready
-# ---------------------------------------------------------------------------
+# ── Copy ───────────────────────────────────────────────────────────────────────
 INTRO = (
     "Welcome to our weekly AI News Update "
     f"for the week of {_date_range}. "
-    "We bring storieson the latest tech releases, directions in AI architecture, applications of AI for productivity, and the impact of AI on the world. "
-    "Let's go to our hosts, Saskia and Albert."
+    "We bring stories on the latest tech releases, directions in AI architecture, "
+    "applications of AI for productivity, and the impact of AI on the world. "
+    f"Let's go to our hosts, {_seat_a} and {_seat_b}."
 )
 
 OUTRO = (
@@ -93,12 +100,15 @@ OUTRO = (
     "Thank you for listening. We'll see you next week."
 )
 
-def render_clip(text: str, voice_id: str, out_stem: str) -> None:
-    """Call ElevenLabs, save audio + timestamps, print confirmation."""
-    audio_path     = Path(config.WEEK_FOLDER) / f"{out_stem}.mp3"
-    timestamp_path = Path(config.WEEK_FOLDER) / f"{out_stem}_timestamps.json"
 
-    print(f"  Rendering {out_stem} ...")
+# ── Render function ────────────────────────────────────────────────────────────
+
+def render_clip(text: str, voice_id: str, out_path: Path) -> None:
+    """Call ElevenLabs, save MP3 + timestamps."""
+    timestamp_path = out_path.with_name(out_path.stem + "_timestamps.json")
+
+    print(f"  Rendering {out_path.name} ...")
+    print(f"    Text: {text[:80]}{'...' if len(text) > 80 else ''}")
 
     response = client.text_to_speech.convert_with_timestamps(
         text=text,
@@ -106,11 +116,11 @@ def render_clip(text: str, voice_id: str, out_stem: str) -> None:
         model_id=config.EL_MODEL_ID,
     )
 
-    # Audio
-    with open(audio_path, "wb") as f:
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(out_path, "wb") as f:
         f.write(base64.b64decode(response.audio_base_64))
 
-    # Timestamps
     alignment_data = {
         "characters":                      response.alignment.characters,
         "character_start_times_seconds":   response.alignment.character_start_times_seconds,
@@ -119,22 +129,23 @@ def render_clip(text: str, voice_id: str, out_stem: str) -> None:
     with open(timestamp_path, "w") as f:
         json.dump(alignment_data, f, indent=2)
 
-    print(f"    Audio:      {audio_path}")
+    print(f"    Saved: {out_path}")
     print(f"    Timestamps: {timestamp_path}")
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
+
+# ── Main ───────────────────────────────────────────────────────────────────────
+
 def main() -> int:
+    print(f"\nGenerating intro/outro for episode: {config.EPISODE_DIR.name}")
+    print(f"  Date range: {_date_range}")
+    print(f"  Hosts: {_seat_a} and {_seat_b}\n")
 
-    # --- 00 Intro ---
-    render_clip(INTRO, config.EL_VOICE_MAIN, "00_intro")
+    render_clip(INTRO, config.VOICE_MAIN, config.INTRO_AUDIO_CLIP)
+    render_clip(OUTRO, config.VOICE_MAIN, config.CLOSE_AUDIO_CLIP)
 
-    print(INTRO)
-
-    # render_clip(OUTRO, config.EL_VOICE_MAIN, "99_outro")
-
+    print("\nDone.")
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

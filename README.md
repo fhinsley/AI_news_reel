@@ -4,6 +4,12 @@ Two automated video pipelines: a weekly AI newsreel and a point-counterpoint deb
 
 Both pipelines use Claude (Anthropic) to generate scripts from live web search, produce multi-voice narration via ElevenLabs, assemble a final video with background footage and timed text overlays, and publish to YouTube with closed captions.
 
+## Release Status
+
+- **First project video released**: NewsCrew Episode 1 (week ending May 7, 2026)
+- **Primary released artifact**: `newscrew/episodes/<episode>/News.mp4`
+- **This README now reflects the currently released NewsCrew workflow and outputs**
+
 ---
 
 ## Requirements
@@ -122,10 +128,12 @@ Builds a studio-style news broadcast video using AI-generated anchor avatars, sh
 ### What It Does
 
 1. **Generates stories** — Uses Claude with web search to produce structured `stories.json` content for the episode
+2. **Generates intro/outro narration** — Creates episode-specific `intro.mp3` and `close.mp3` voice clips used by the final compositor
 2. **Renders anchor avatars** — Submits avatar jobs and downloads generated anchor clips
 3. **Plans camera/segment shots** — Creates `shot_plan.json` with segment timing, shot mode, and clip references
 4. **Fetches visuals** — Pulls b-roll assets for visual segments
-5. **Composites final program** — Builds a full studio-style MP4 with background set, anchors, b-roll windows or full-frame b-roll, PiP inserts, and lower-third overlays
+5. **Generates transcript (optional)** — Produces `Transcript.pdf` from `stories.json` for publishing/show notes
+6. **Composites final program** — Builds a full studio-style MP4 with background set, anchors, b-roll windows or full-frame b-roll, PiP inserts, lower-third overlays, and intro/close music+voice treatment
 
 ### Run
 
@@ -133,13 +141,24 @@ Builds a studio-style news broadcast video using AI-generated anchor avatars, sh
 python newscrew/run_newscrew.py
 ```
 
+`run_newscrew.py` currently runs story generation, anchor rendering, shot planning, visual fetch, and final compositing.
+`newscrew/makeinoutro.py` and `newscrew/generate_transcript.py` are optional manual pre/post steps.
+
 | Step | Script | Input | Output |
 |------|--------|-------|--------|
 | 1 | `newscrew/script_generator.py` | `newscrew/markdown/Weekly_Newsreel_Prompt.md` | `newscrew/episodes/<episode>/stories.json` |
-| 2 | `newscrew/anchor_renderer.py` | stories + avatar config | `newscrew/episodes/<episode>/anchor_clips/*.mp4`, `anchor_jobs.json` |
-| 3 | `newscrew/plan_shots.py` | stories + anchor jobs | `newscrew/episodes/<episode>/shot_plan.json` |
-| 4 | `newscrew/fetch_visuals.py` | shot plan + story metadata | b-roll assets in episode folder |
-| 5 | `newscrew/build_video.py` | shot plan + clips + assets | `newscrew/episodes/<episode>/News.mp4` |
+| 2 | `newscrew/makeinoutro.py` (manual, optional) | episode date range + anchor seats | `newscrew/episodes/<episode>/intro.mp3`, `close.mp3` (+ timestamp JSONs) |
+| 3 | `newscrew/anchor_renderer.py` | stories + avatar config | `newscrew/episodes/<episode>/anchor_clips/*.mp4`, `anchor_jobs.json` |
+| 4 | `newscrew/plan_shots.py` | stories + anchor jobs | `newscrew/episodes/<episode>/shot_plan.json` |
+| 5 | `newscrew/fetch_visuals.py` | shot plan + story metadata | b-roll assets in episode folder |
+| 6 | `newscrew/generate_transcript.py` (manual, optional) | `newscrew/episodes/<episode>/stories.json` | `newscrew/episodes/<episode>/Transcript.pdf` |
+| 7 | `newscrew/build_video.py` | shot plan + clips + assets + intro/close audio | `newscrew/episodes/<episode>/News.mp4` |
+
+### First Released Episode Notes
+
+- The first released video for this project was produced through the NewsCrew path.
+- Episode artifacts are kept in `newscrew/episodes/<episode>/`.
+- For this release, key outputs include `stories.json`, `shot_plan.json`, `Transcript.pdf`, and `News.mp4`.
 
 ### Shot Modes
 
@@ -276,11 +295,14 @@ newscrew/                   AI-avatar studio broadcast pipeline
   run_newscrew.py
   config.py
   script_generator.py
+  makeinoutro.py
   anchor_renderer.py
   plan_shots.py
   fetch_visuals.py
+  generate_transcript.py
   build_video.py
   smoke_test.py
+  markdown/
   assets/                   project-local visual assets (contents gitignored)
   episodes/                 generated episode artifacts
 debate/                     debate pipeline scripts

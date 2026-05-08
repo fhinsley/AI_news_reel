@@ -57,17 +57,13 @@ import numpy as np
 
 from moviepy import (
     VideoFileClip,
-    AudioFileClip,
     ImageClip,
     ColorClip,
     CompositeVideoClip,
-    CompositeAudioClip,
     TextClip,
     concatenate_videoclips,
-    concatenate_audioclips,
 )
 from moviepy.video.fx import Resize, FadeIn, FadeOut, CrossFadeIn, CrossFadeOut, Crop
-from moviepy.audio.fx import AudioFadeIn, AudioFadeOut, AudioLoop
 
 from config import (
     EPISODE_DIR,
@@ -99,14 +95,6 @@ from config import (
     CROSSFADE_DURATION,
     SHOT_PLAN_JSON,
     PROJECT_ROOT,
-    MUSIC_PATH,
-    INTRO_AUDIO_CLIP,
-    CLOSE_AUDIO_CLIP,
-    INTRO_MUSIC_LEAD,
-    MUSIC_BED_VOLUME,
-    MUSIC_FULL_VOLUME,
-    CLOSE_WIDE_HOLD,
-    CLOSE_CREDITS_DURATION,
 )
 
 W, H = VIDEO_RESOLUTION
@@ -594,13 +582,10 @@ def load_background(duration: float) -> ImageClip | ColorClip:
 
 # ── Single segment compositor ──────────────────────────────────────────────────
 
-def composite_segment(seg: dict, all_segments: list | None = None, nameplate_layers: list | None = None) -> CompositeVideoClip | None:
+def composite_segment(seg: dict, all_segments: list | None = None) -> CompositeVideoClip | None:
     """
     Build one CompositeVideoClip for a single shot plan segment.
     Returns None if the anchor clip is missing (segment not yet rendered).
-
-    nameplate_layers: optional list of clips to composite over the full canvas
-    BEFORE the solo viewfinder crop is applied — so they scale correctly with it.
     """
     sid = seg["segment_id"]
     shot_mode = seg.get("shot_mode", "solo_a")
@@ -650,7 +635,7 @@ def composite_segment(seg: dict, all_segments: list | None = None, nameplate_lay
     lt = build_lower_third(headline, source, duration, frame=lt_frame)
     lt_layers = [lt] if lt else []
 
-    all_layers = [bg, broll] + anchor_layers + lt_layers + (nameplate_layers or [])
+    all_layers = [bg, broll] + anchor_layers + lt_layers
     comp = CompositeVideoClip(all_layers, size=(W, H)).with_duration(duration)
 
     # ── Solo viewfinder crop ───────────────────────────────────────────────────
@@ -760,202 +745,6 @@ def print_dry_run(plan: dict) -> None:
     print()
 
 
-# ── Audio helpers ──────────────────────────────────────────────────────────────
-
-def _load_music(duration: float, volume: float) -> AudioFileClip | None:
-    """Load opening music trimmed/looped to duration at given volume. Returns None if missing."""
-    if not MUSIC_PATH.exists():
-        print(f"  WARNING: music not found at {MUSIC_PATH}")
-        return None
-    music = AudioFileClip(str(MUSIC_PATH))
-    if music.duration < duration:
-        music = music.with_effects([AudioLoop(duration=duration)])
-    else:
-        music = music.with_end(duration)
-    return music.with_effects([AudioFadeIn(0.1)]).with_volume_scaled(volume)
-
-
-def _load_voice(clip_path: Path) -> AudioFileClip | None:
-    """Load voice audio from an MP4 or audio file. Returns None if missing."""
-    if not clip_path.exists():
-        print(f"  INFO: voice clip not found at {clip_path} — skipping")
-        return None
-    if clip_path.suffix.lower() in (".mp4", ".mov"):
-        vc = VideoFileClip(str(clip_path))
-        return vc.audio
-    return AudioFileClip(str(clip_path))
-
-
-# ── Intro clip ─────────────────────────────────────────────────────────────────
-
-def build_intro_clip() -> CompositeVideoClip:
-    """
-    Opening sequence:
-      - Wall default image fills full screen
-      - Music plays at full volume for INTRO_MUSIC_LEAD seconds
-      - Intro voice begins; music ducks to MUSIC_BED_VOLUME under voice
-      - Crossfades to dimmed wide set background
-    """
-    wall_default = PROJECT_ROOT / "assets" / "wall_default.jpg"
-    voice = _load_voice(INTRO_AUDIO_CLIP)
-    voice_duration = voice.duration if voice else 4.0
-    wall_duration  = INTRO_MUSIC_LEAD + voice_duration
-    wide_hold      = 1.5
-    total_duration = wall_duration + wide_hold
-
-    # Wall default panel
-    if wall_default.exists():
-        wall = (ImageClip(str(wall_default))
-                .with_duration(wall_duration)
-                .with_effects([Resize((W, H))]))
-    else:
-        wall = ColorClip(size=(W, H), color=[18, 22, 30], duration=wall_duration)
-
-    # Dimmed wide set
-    wide_bg = load_background(wide_hold).with_opacity(0.55)
-    black   = ColorClip(size=(W, H), color=[0, 0, 0], duration=wide_hold)
-    wide    = CompositeVideoClip([black, wide_bg], size=(W, H)).with_duration(wide_hold)
-
-    wall  = wall.with_effects([CrossFadeOut(0.8)])
-    wide  = wide.with_effects([CrossFadeIn(0.8)])
-    video = concatenate_videoclips([wall, wide], method="compose")
-
-    # Audio: music full lead-in, then bed under voice
-    audio_layers = []
-    music_full = _load_music(INTRO_MUSIC_LEAD, MUSIC_FULL_VOLUME)
-    music_bed  = _load_music(voice_duration + wide_hold, MUSIC_BED_VOLUME)
-    if music_full:
-        audio_layers.append(music_full)
-    if music_bed:
-        audio_layers.append(music_bed.with_start(INTRO_MUSIC_LEAD))
-    if voice:
-        audio_layers.append(voice.with_start(INTRO_MUSIC_LEAD))
-
-    if audio_layers:
-        video = video.with_audio(CompositeAudioClip(audio_layers))
-
-    print(f"  intro clip: {total_duration:.1f}s")
-    return video.with_duration(total_duration)
-
-
-# ── Anchor nameplate ───────────────────────────────────────────────────────────
-
-def build_anchor_nameplate(anchor_id: str, duration: float = 3.0) -> CompositeVideoClip | None:
-    """Navy bar with anchor name — shown at the start of each anchor's first story."""
-    anchor = ANCHOR_LOOKUP.get(anchor_id)
-    if not anchor:
-        return None
-
-    display_name = anchor_id   # use actual name, not label
-    lx, ly, lw, lh = LOWER_THIRD_FRAME
-
-    bg = ColorClip(size=(lw, lh), color=LOWER_THIRD_BG_COLOR, duration=duration)
-    layers = [bg]
-    try:
-        name_clip = TextClip(
-            font=LOWER_THIRD_FONT,
-            text=display_name,
-            font_size=LOWER_THIRD_HEADLINE_SIZE,
-            color=LOWER_THIRD_HEADLINE_COLOR,
-            bg_color=None,
-            transparent=True,
-            duration=duration,
-        ).with_position((lw // 2 - 100, (lh - LOWER_THIRD_HEADLINE_SIZE) // 2))
-        layers.append(name_clip)
-    except Exception as e:
-        print(f"  WARNING: nameplate render failed for {anchor_id}: {e}")
-
-    plate = CompositeVideoClip(layers, size=(lw, lh)).with_position((lx, ly))
-    return plate.with_effects([FadeIn(0.3), FadeOut(0.3)])
-
-
-# ── Between-story pause ────────────────────────────────────────────────────────
-
-def build_between_pause(
-    outgoing_comp: CompositeVideoClip,
-    incoming_comp: CompositeVideoClip,
-    hold: float = 0.5,
-) -> CompositeVideoClip:
-    """Hold last frame of outgoing for `hold`s, then first frame of incoming for `hold`s."""
-    last_frame  = outgoing_comp.get_frame(outgoing_comp.duration - 1 / VIDEO_FPS)
-    first_frame = incoming_comp.get_frame(0)
-    out_hold = ImageClip(last_frame).with_duration(hold)
-    in_hold  = ImageClip(first_frame).with_duration(hold)
-    return concatenate_videoclips([out_hold, in_hold], method="compose")
-
-
-# ── Close clip ─────────────────────────────────────────────────────────────────
-
-def build_close_clip(plan: dict) -> CompositeVideoClip:
-    """
-    Closing sequence:
-      - Wide set fades to black (CLOSE_WIDE_HOLD seconds)
-      - Credit screen with source publication names (CLOSE_CREDITS_DURATION seconds)
-      - Close voice + music return over the whole sequence
-    """
-    sources = []
-    for seg in plan.get("segments", []):
-        src = seg.get("lower_third_source")
-        if src and src not in sources:
-            sources.append(src)
-
-    wide_hold  = CLOSE_WIDE_HOLD
-    credit_dur = CLOSE_CREDITS_DURATION
-
-    # Wide set fading to black
-    wide_bg = load_background(wide_hold).with_opacity(0.5)
-    black_w = ColorClip(size=(W, H), color=[0, 0, 0], duration=wide_hold)
-    wide    = (CompositeVideoClip([black_w, wide_bg], size=(W, H))
-               .with_duration(wide_hold)
-               .with_effects([FadeOut(wide_hold)]))
-
-    # Credit screen
-    black_c = ColorClip(size=(W, H), color=[0, 0, 0], duration=credit_dur)
-    credit_layers = [black_c]
-
-    try:
-        header = TextClip(
-            font=LOWER_THIRD_FONT, text="Sources",
-            font_size=36, color="white",
-            bg_color=None, transparent=True, duration=credit_dur,
-        ).with_position(("center", 300))
-        credit_layers.append(header)
-    except Exception as e:
-        print(f"  WARNING: credit header render failed: {e}")
-
-    for i, src in enumerate(sources):
-        try:
-            src_clip = TextClip(
-                font=LOWER_THIRD_FONT, text=src,
-                font_size=28, color="#AABBEE",
-                bg_color=None, transparent=True, duration=credit_dur,
-            ).with_position(("center", 370 + i * 48))
-            credit_layers.append(src_clip)
-        except Exception as e:
-            print(f"  WARNING: credit source render failed ({src}): {e}")
-
-    credits = (CompositeVideoClip(credit_layers, size=(W, H))
-               .with_duration(credit_dur)
-               .with_effects([FadeIn(1.0)]))
-
-    video = concatenate_videoclips([wide, credits], method="compose")
-    total_duration = wide_hold + credit_dur
-
-    # Audio: close voice + music
-    audio_layers = []
-    music = _load_music(total_duration, MUSIC_FULL_VOLUME)
-    voice = _load_voice(CLOSE_AUDIO_CLIP)
-    if music:
-        audio_layers.append(music.with_effects([AudioFadeIn(1.0)]))
-    if voice:
-        audio_layers.append(voice)
-    if audio_layers:
-        video = video.with_audio(CompositeAudioClip(audio_layers))
-
-    print(f"  close clip: {total_duration:.1f}s  ({len(sources)} sources)")
-    return video.with_duration(total_duration)
-
-
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def main():
@@ -977,50 +766,21 @@ def main():
     print(f"  {len(plan['segments'])} segments in shot plan")
     print(f"  output → {args.out}\n")
 
-    # ── 1. Assemble final clip list ────────────────────────────────────────────
-    print("\n  Assembling episode sequence...")
-    final_clips = []
-    seen_anchors: set[str] = set()
-
-    # Intro
-    print("  building intro...")
-    final_clips.append(build_intro_clip())
-
-    # Stories with nameplates and between-story pauses
-    story_count = 0
+    clips_meta = []
     for seg in plan["segments"]:
-        anchor_id = seg.get("anchor_id", "")
-
-        # Build nameplate for first appearance of each anchor
-        nameplate_layers = None
-        if anchor_id and anchor_id not in seen_anchors:
-            seen_anchors.add(anchor_id)
-            nameplate = build_anchor_nameplate(anchor_id, duration=3.0)
-            if nameplate:
-                nameplate_layers = [nameplate]
-
-        comp = composite_segment(seg, all_segments=plan["segments"], nameplate_layers=nameplate_layers)
+        comp = composite_segment(seg, all_segments=plan["segments"])
         if comp is None:
             continue
+        t_in  = seg.get("transition_in",  "cut")
+        t_out = seg.get("transition_out", "cut")
+        clips_meta.append((comp, t_in, t_out))
 
-        # Between-story pause (not before first story)
-        if story_count > 0:
-            pause = build_between_pause(final_clips[-1], comp, hold=0.5)
-            final_clips.append(pause)
-
-        final_clips.append(comp)
-        story_count += 1
-
-    if story_count == 0:
+    if not clips_meta:
         print("ERROR: no compositable segments found. Run anchor_renderer.py first.")
         sys.exit(1)
 
-    # Close
-    print("  building close...")
-    final_clips.append(build_close_clip(plan))
-
-    # ── 3. Concatenate and write ───────────────────────────────────────────────
-    print(f"\n  {len(final_clips)} clips total. Concatenating...")
+    print(f"\n  {len(clips_meta)} segments composited. Concatenating...")
+    final_clips = apply_transitions(clips_meta)
     episode = concatenate_videoclips(final_clips, method="compose")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)

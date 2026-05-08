@@ -214,16 +214,35 @@ def generate_stories(prompt: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def validate_and_report(data: dict) -> None:
-    """Print a summary and flag stories outside the character target or
-    missing broll_search_term."""
+    """Print a summary and flag stories outside the character target,
+    missing broll_search_term, or with wrong story counts."""
+
+    # Expected story counts per section — must match STORY COUNT in the prompt
+    EXPECTED_COUNTS = {
+        "Core Tech Releases":          2,
+        "Directions in AI Architecture": 2,
+        "AI For Productivity":         1,
+        "World Impact":                1,
+    }
+    EXPECTED_TOTAL = sum(EXPECTED_COUNTS.values())
+
     sections = data.get("sections", [])
     print(f"\nWeek of: {data.get('week_of', 'unknown')}")
     print(f"Sections: {len(sections)}")
 
+    total_stories = 0
     for section in sections:
-        name   = section.get("section", "unnamed")
+        name    = section.get("section", "unnamed")
         stories = section.get("stories", [])
-        print(f"\n  [{name}] — {len(stories)} stories")
+        total_stories += len(stories)
+
+        expected = EXPECTED_COUNTS.get(name)
+        count_flag = ""
+        if expected is not None and len(stories) != expected:
+            count_flag = f"  ⚠ WRONG COUNT (got {len(stories)}, expected {expected})"
+
+        print(f"\n  [{name}] — {len(stories)} stories{count_flag}")
+
         for i, story in enumerate(stories, 1):
             body       = story.get("body", "")
             char_count = len(body)
@@ -239,6 +258,9 @@ def validate_and_report(data: dict) -> None:
 
             flag_str = f"  ⚠ {', '.join(flags)}" if flags else ""
             print(f"    Story {i}: {story.get('title', 'no title')[:55]}{flag_str}")
+
+    if total_stories != EXPECTED_TOTAL:
+        print(f"\n  ⚠ TOTAL STORY COUNT: got {total_stories}, expected {EXPECTED_TOTAL}")
 
 
 def save_stories(data: dict) -> None:

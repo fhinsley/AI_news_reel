@@ -8,7 +8,7 @@ WEEKLY_ROOT  = PROJECT_ROOT / "episodes"
 
 
 # TODO: automate episode directory creation based on current date, and move completed episode folders to an archive directory
-END_DATE     = date(2026, 5, 7)   # update each week
+END_DATE     = date(2026, 5, 4)   # update each week
 EPISODE_DIR  = WEEKLY_ROOT / END_DATE.strftime("%m%d%y_Episode")
 
 STORIES_JSON      = EPISODE_DIR / "stories.json"
@@ -58,7 +58,7 @@ ANCHORS = [
     },
     {
         "id":        "Daphne",
-        "seat":      None,
+        "seat":      "b",
         "avatar_id": "Daphne_public_4",
         "voice_id":  "812d4eea4a8442a382dcaf2dbaddbd93",
         "label":     "Anchor C",
@@ -73,7 +73,7 @@ ANCHORS = [
     {
         "id":        "Saskia",
         "seat":      "a",
-        "avatar_id": "Saskia_public_1",
+        "avatar_id": "Saskia_public_5",
         "voice_id":  "a4a6df6d4fc248829f72edde5529defa",
         "label":     "Anchor E",
     },
@@ -84,34 +84,7 @@ ANCHORS = [
         "voice_id":  "d6a657274b184772ac28a6146f729d3a",
         "label":     "Anchor F",
     },
-    {
-        "id":        "Minho",
-        "seat":      None,
-        "avatar_id": "Minho_public_2",
-        "voice_id":  "de650d5d1a7f46c4a6e1549d127d250c",
-        "label":     "Anchor G",
-    },
-    {
-        "id":        "Albert",
-        "seat":      None,
-        "avatar_id": "Albert_public_2",
-        "voice_id":  "c0590110f2c94e01b349237e78edb7d1",
-        "label":     "Anchor H",
-    },
-    {
-        "id":        "Brandon",
-        "seat":      "b",
-        "avatar_id": "Brandon_expressive2_public",
-        "voice_id":  "543ac3d42fcf41dfb6fc673e5e3da825",
-        "label":     "Anchor I",
-    }
 ]
-
-
-VOICE_CLANCY = "FLpz0UhC9a7CIfUSBo6S"    # Clancy (MAIN)
-VOICE_MAIN   = VOICE_CLANCY           # alias used by newsreel_tts.py
-EL_MODEL_ID  = "eleven_turbo_v2_5"   # ElevenLabs model — update if needed
-
 
 
 # Section order must match stories.json section keys
@@ -136,15 +109,15 @@ SET_BACKGROUND_IMAGE = str(PROJECT_ROOT / "assets" / "set_background.jpg")
 # Anchor A sits left-of-center; Anchor B sits right-of-center.
 SOLO_A_LOWER_THIRD_FRAME = (290, 600, 710, 40)
 SOLO_B_LOWER_THIRD_FRAME = (920, 600, 710, 40)
-ANCHOR_A_FRAME = (515,  330, 250)   # left seat
-ANCHOR_B_FRAME = (1155, 330, 250)  # right seat
+ANCHOR_A_FRAME = (515,  320, 250)   # left seat
+ANCHOR_B_FRAME = (1155, 315, 250)  # right seat
 ANCHOR_A_SOLOFRAME = (290, 260, 710, 399)   # full-left for solo shots
 ANCHOR_B_SOLOFRAME = (920, 260, 710, 399)   # full-right for solo shots
 ANCHOR_VIDEO_FRAME = (850, 300, 192, 140)   # full-left for solo shots (same as solo frame for now)
 # Pixels cropped from bottom of anchor clip to simulate desk occlusion.
 # Increase if the desk cuts higher into the anchor's torso.
 ANCHOR_CROP_BOTTOM = 30
-ANCHOR_SOLO_CROP_BOTTOM = 0
+ANCHOR_SOLO_CROP_BOTTOM = 35
 # Wall-mounted B-roll screen (center-back of set)
 WALL_SCREEN_FRAME = (640, 160, 657, 327)   # (x, y, w, h)
 # PiP anchor insert used in "broll" shot mode
@@ -169,23 +142,7 @@ CROSSFADE_DURATION = 0.4
 # Shot plan path for the current episode
 SHOT_PLAN_JSON = EPISODE_DIR / "shot_plan.json"
 
-# ── Episode audio / intro / close ─────────────────────────────────────────────
-# Opening music — fades under intro voice, returns at close
-MUSIC_PATH         = PROJECT_ROOT / "music" / "news" / "breaking-news2.mp3"
-# Intro voice clip — HeyGen or ElevenLabs MP4/MP3 for the spoken introduction
-INTRO_AUDIO_CLIP   = EPISODE_DIR / "intro.mp3"     # ElevenLabs MP3 output
-# Close voice clip — spoken sign-off ("that's the news" etc.)
-CLOSE_AUDIO_CLIP   = EPISODE_DIR / "close.mp3"
-# Duration of music-only lead-in before intro voice begins (seconds)
-INTRO_MUSIC_LEAD   = 5.0
-# Volume of music bed under voice (0.0–1.0)
-MUSIC_BED_VOLUME   = 0.15
-# Full music volume for open/close
-MUSIC_FULL_VOLUME  = 0.85
-# Duration of wide set hold before fade-to-black at close (seconds)
-CLOSE_WIDE_HOLD    = 2.0
-# Duration of credit roll at end (seconds)
-CLOSE_CREDITS_DURATION = 6.0
+# ── B-roll sourcing ────────────────────────────────────────────────────────────
 PEXELS_API_KEY  = os.environ.get("PEXELS_API_KEY")
 OPENAI_API_KEY  = os.environ.get("OPENAI_API_KEY")   # DALL-E fallback
 BROLL_STRATEGY  = ["pexels", "dalle"]  # order of preference
