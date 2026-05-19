@@ -130,10 +130,10 @@ Builds a studio-style news broadcast video using AI-generated anchor avatars, sh
 1. **Generates stories** — Uses Claude with web search to produce structured `stories.json` content for the episode
 2. **Generates intro/outro narration** — Creates episode-specific `intro.mp3` and `close.mp3` voice clips used by the final compositor
 2. **Renders anchor avatars** — Submits avatar jobs and downloads generated anchor clips
-3. **Plans camera/segment shots** — Creates `shot_plan.json` with segment timing, shot mode, and clip references
-4. **Fetches visuals** — Pulls b-roll assets for visual segments
+3. **Plans camera/segment shots** — Creates `shot_plan.json` in broadcast order, including episode intro/outro, section bumpers, section openers, story bodies, optional pre/post tosses, optional mid-story breaks, and b-roll voice/return windows
+4. **Fetches visuals** — Pulls b-roll assets for visual segments, preferring Pexels HD video and falling back to still images
 5. **Generates transcript (optional)** — Produces `Transcript.pdf` from `stories.json` for publishing/show notes
-6. **Composites final program** — Builds a full studio-style MP4 with background set, anchors, b-roll windows or full-frame b-roll, PiP inserts, lower-third overlays, and intro/close music+voice treatment
+6. **Composites final program** — Builds a full studio-style MP4 with background set, per-anchor crop control, rest-frame stand-ins, b-roll windows or full-frame b-roll, PiP inserts, lower-third overlays, and intro/close music+voice treatment
 
 ### Run
 
@@ -154,6 +154,26 @@ python newscrew/run_newscrew.py
 | 6 | `newscrew/generate_transcript.py` (manual, optional) | `newscrew/episodes/<episode>/stories.json` | `newscrew/episodes/<episode>/Transcript.pdf` |
 | 7 | `newscrew/build_video.py` | shot plan + clips + assets + intro/close audio | `newscrew/episodes/<episode>/News.mp4` |
 
+### Story Schema (NewsCrew)
+
+- Story text is stored as a `sentences` array (instead of a single `body` string).
+- Optional editorial controls can be added manually per story for pacing and inter-anchor interaction:
+  - `pre_story`, `post_story`
+  - `break_after`, `break_question`, `break_response_lead`
+  - `broll_after`, `broll_return`, `toss_to`
+
+### Segment Types in shot_plan.json
+
+- `bumper` — episode/section intro-style wall-default segments with voice
+- `wide` — section opener two-anchor set framing
+- `solo_a` / `solo_b` — primary story delivery shots
+- `broll` — full-frame visual segment with voiceover
+
+The planner now emits IDs with structured suffixes for optional subsegments:
+- `__pre`, `__post`
+- `__break_q`, `__break_r`
+- `__broll_voice`, `__broll_return`
+
 ### First Released Episode Notes
 
 - The first released video for this project was produced through the NewsCrew path.
@@ -168,6 +188,26 @@ The compositor supports newsroom-style segment layouts configured per segment in
 - `solo_a` — focus on anchor A, non-speaking anchor dimmed
 - `solo_b` — focus on anchor B, non-speaking anchor dimmed
 - `broll` — full-frame b-roll with anchor picture-in-picture
+
+### Rest Frames and Anchor Tuning
+
+- You can place anchor rest stills at `newscrew/assets/rest_frames/<avatar_id>.jpg`.
+- During composition, stand-in anchors use rest stills first, then frozen first-frame fallback, then a neutral placeholder.
+- Per-anchor lower-body crop is configured via `crop_bottom` in each entry of `newscrew/config.py`.
+- Use `newscrew/extract_anchor_frames.py` to export candidate stills from generated anchor clips.
+
+Example:
+
+```bash
+python newscrew/extract_anchor_frames.py --all
+```
+
+This writes `*_frames/` preview folders beside each clip so you can choose natural rest poses.
+
+### Shorts Helpers
+
+- `newscrew/make_short_shot_plan.py` rewrites `shot_plan.json` anchor clip paths from `.mp4` to `_short.mp4`.
+- `newscrew/make_shorts.py` provides the same shortcut flow for short-form clip variants.
 
 ### Assets and Version Control
 

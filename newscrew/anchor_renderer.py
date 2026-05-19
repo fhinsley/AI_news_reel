@@ -21,6 +21,11 @@ from config import (
     ANCHORS, ANCHOR_LEAD,
 )
 
+def _safe_sid(segment_id: str) -> str:
+    """Sanitize a segment ID for use as a filename — replace path-unsafe characters."""
+    return segment_id.replace("/", "-").replace("\\", "-").replace(":", "-")
+
+
 HEADERS = {
     "X-Api-Key": HEYGEN_API_KEY,
     "Content-Type": "application/json",
@@ -34,14 +39,18 @@ MAX_POLL_ATTEMPTS     = 60   # 30 min ceiling
 
 def assign_anchors(stories: dict) -> list[dict]:
     """
-    Flatten all segments across sections into an ordered list,
-    assign anchors alternating A/B, with intro/outro forced to ANCHOR_LEAD.
-    Returns a list of segment dicts ready for job submission.
+    Flatten all segments into an ordered list for HeyGen submission.
+
+    Segment types emitted (in order):
+      - episode intro   (top-level stories["intro"] if present)
+      - per section:    bumper (section["bumper"] if present)
+                        stories (alternating A/B)
+      - episode outro   (top-level stories["outro"] if present)
+
+    Only segments with non-empty script text are submitted.
     """
     anchor_lookup = {a["id"]: a for a in ANCHORS}
 
-    # Seat anchors only — sorted a then b — drive story alternation.
-    # List order in ANCHORS does not matter; seat field does.
     seat_anchors = sorted(
         [a for a in ANCHORS if a.get("seat") in ("a", "b")],
         key=lambda a: a["seat"],
@@ -54,37 +63,180 @@ def assign_anchors(stories: dict) -> list[dict]:
 
     segments = []
     story_counter = 0
+    lead_anchor = anchor_lookup.get(ANCHOR_LEAD, seat_anchors[0])
+
+    # ── Episode intro ──────────────────────────────────────────────────────────
+    if intro_text := stories.get("intro", "").strip():
+        segments.append({
+            "segment_id": "__intro__",
+            "type":       "intro",
+            "script":     intro_text,
+            "anchor_id":  lead_anchor["id"],
+            "avatar_id":  lead_anchor["avatar_id"],
+            "voice_id":   lead_anchor["voice_id"],
+        })
 
     for section_data in stories["sections"]:
         section_name = section_data["section"]
 
-        # Section intro line (if present)
-        if intro := section_data.get("intro"):
-            anchor = anchor_lookup[ANCHOR_LEAD]
+        # ── Section bumper ─────────────────────────────────────────────────────
+        if bumper_text := section_data.get("bumper", "").strip():
             segments.append({
-                "segment_id":   f"{section_name}__intro",
-                "section":      section_name,
-                "type":         "intro",
-                "script":       intro,
-                "anchor_id":    anchor["id"],
-                "avatar_id":    anchor["avatar_id"],
-                "voice_id":     anchor["voice_id"],
+                "segment_id": f"{section_name}__bumper",
+                "section":    section_name,
+                "type":       "bumper",
+                "script":     bumper_text,
+                "anchor_id":  lead_anchor["id"],
+                "avatar_id":  lead_anchor["avatar_id"],
+                "voice_id":   lead_anchor["voice_id"],
             })
 
+        # ── Stories ────────────────────────────────────────────────────────────
         for story in section_data.get("stories", []):
-            anchor = seat_anchors[story_counter % 2]
+            story_anchor    = seat_anchors[story_counter % 2]
+            other_anchor    = seat_anchors[(story_counter + 1) % 2]
+
+            # toss_to overrides which anchor delivers pre/post lines
+            toss_id = story.get("toss_to", "").strip()
+            if toss_id:
+                toss_anchor = anchor_lookup.get(toss_id, other_anchor)
+            else:
+                toss_anchor = other_anchor
+
+            # ── Derive scripts from sentences ──────────────────────────────
+            sentences = story.get("sentences", [])
+            if not sentences:
+                print(f"  WARNING: story '{story.get('title','?')[:40]}' has no sentences — skipping")
+                story_counter += 1
+                continue
+
+            break_after = story.get("break_after")
+            has_break   = (
+                break_after is not None
+                and story.get("break_question", "").strip()
+                and story.get("break_response_lead", "").strip()
+            )
+
+            broll_after  = story.get("broll_after")
+            broll_return = story.get("broll_return")
+            has_broll    = broll_after is not None
+
+            if has_break:
+                idx         = int(break_after)
+                part_a      = " ".join(sentences[:idx])
+                part_b      = f"{story.get('break_response_lead','').strip()} {' '.join(sentences[idx:])}.strip()"
+                question    = story.get("break_question", "").strip()
+            elif has_broll:
+                b_start     = int(broll_after)
+                b_end       = int(broll_return) if broll_return is not None else len(sentences)
+                part_a      = " ".join(sentences[:b_start])
+                broll_voice = " ".join(sentences[b_start:b_end])
+                part_b      = " ".join(sentences[b_end:]) if b_end < len(sentences) else None
+            else:
+                part_a = " ".join(sentences)
+
+            # ── pre_story ──────────────────────────────────────────────────
+            if pre_text := story.get("pre_story", "").strip():
+                pre_id = f"{section_name}__{story['title'][:40]}__pre"
+                segments.append({
+                    "segment_id": pre_id,
+                    "section":    section_name,
+                    "type":       "pre_story",
+                    "script":     pre_text,
+                    "anchor_id":  toss_anchor["id"],
+                    "avatar_id":  toss_anchor["avatar_id"],
+                    "voice_id":   toss_anchor["voice_id"],
+                })
+
+            # ── story body part A ──────────────────────────────────────────
             segments.append({
-                "segment_id":   f"{section_name}__{story['title'][:40]}",
-                "section":      section_name,
-                "type":         "story",
-                "script":       story["body"],
-                "anchor_id":    anchor["id"],
-                "avatar_id":    anchor["avatar_id"],
-                "voice_id":     anchor["voice_id"],
-                "source_name":  story.get("source_name"),
-                "source_url":   story.get("source_url"),
+                "segment_id":  f"{section_name}__{story['title'][:40]}",
+                "section":     section_name,
+                "type":        "story",
+                "script":      part_a,
+                "anchor_id":   story_anchor["id"],
+                "avatar_id":   story_anchor["avatar_id"],
+                "voice_id":    story_anchor["voice_id"],
+                "source_name": story.get("source_name"),
+                "source_url":  story.get("source_url"),
             })
+
+            # ── broll voice clip ───────────────────────────────────────────
+            if has_broll and broll_voice.strip():
+                segments.append({
+                    "segment_id": f"{section_name}__{story['title'][:40]}__broll_voice",
+                    "section":    section_name,
+                    "type":       "broll_voice",
+                    "script":     broll_voice,
+                    "anchor_id":  story_anchor["id"],
+                    "avatar_id":  story_anchor["avatar_id"],
+                    "voice_id":   story_anchor["voice_id"],
+                })
+                if part_b and part_b.strip():
+                    segments.append({
+                        "segment_id":  f"{section_name}__{story['title'][:40]}__broll_return",
+                        "section":     section_name,
+                        "type":        "broll_return",
+                        "script":      part_b,
+                        "anchor_id":   story_anchor["id"],
+                        "avatar_id":   story_anchor["avatar_id"],
+                        "voice_id":    story_anchor["voice_id"],
+                        "source_name": story.get("source_name"),
+                        "source_url":  story.get("source_url"),
+                    })
+
+            # ── mid-story anchor break ─────────────────────────────────────
+            if has_break:
+                part_b_lead = story.get("break_response_lead", "").strip()
+                part_b_body = " ".join(sentences[int(break_after):])
+                part_b_full = f"{part_b_lead} {part_b_body}".strip()
+                question_text = story.get("break_question", "").strip()
+                segments.append({
+                    "segment_id": f"{section_name}__{story['title'][:40]}__break_q",
+                    "section":    section_name,
+                    "type":       "break_question",
+                    "script":     question_text,
+                    "anchor_id":  toss_anchor["id"],
+                    "avatar_id":  toss_anchor["avatar_id"],
+                    "voice_id":   toss_anchor["voice_id"],
+                })
+                segments.append({
+                    "segment_id":  f"{section_name}__{story['title'][:40]}__break_r",
+                    "section":     section_name,
+                    "type":        "break_response",
+                    "script":      part_b_full,
+                    "anchor_id":   story_anchor["id"],
+                    "avatar_id":   story_anchor["avatar_id"],
+                    "voice_id":    story_anchor["voice_id"],
+                    "source_name": story.get("source_name"),
+                    "source_url":  story.get("source_url"),
+                })
+
+            # ── post_story ─────────────────────────────────────────────────
+            if post_text := story.get("post_story", "").strip():
+                post_id = f"{section_name}__{story['title'][:40]}__post"
+                segments.append({
+                    "segment_id": post_id,
+                    "section":    section_name,
+                    "type":       "post_story",
+                    "script":     post_text,
+                    "anchor_id":  toss_anchor["id"],
+                    "avatar_id":  toss_anchor["avatar_id"],
+                    "voice_id":   toss_anchor["voice_id"],
+                })
+
             story_counter += 1
+
+    # ── Episode outro ──────────────────────────────────────────────────────────
+    if outro_text := stories.get("outro", "").strip():
+        segments.append({
+            "segment_id": "__outro__",
+            "type":       "outro",
+            "script":     outro_text,
+            "anchor_id":  lead_anchor["id"],
+            "avatar_id":  lead_anchor["avatar_id"],
+            "voice_id":   lead_anchor["voice_id"],
+        })
 
     return segments
 
@@ -145,7 +297,7 @@ def submit_all(segments: list[dict]) -> dict:
             "job_id":     job_id,
             "status":     "pending",
             "segment":    seg,
-            "clip_path":  None,
+            "clip_path":  str(ANCHOR_CLIPS_DIR / f"{_safe_sid(sid)}.mp4"),
         }
         print(f"  submitted: {sid} → {job_id}")
         save_jobs(existing_jobs)   # save after each submit — safe to interrupt
@@ -192,7 +344,8 @@ def poll_and_download(jobs: dict) -> dict:
 
             if heygen_status == "completed":
                 video_url = status_data["video_url"]
-                clip_path = ANCHOR_CLIPS_DIR / f"{sid}.mp4"
+                safe_sid  = _safe_sid(sid)
+                clip_path = ANCHOR_CLIPS_DIR / f"{safe_sid}.mp4"
                 _download_clip(video_url, clip_path)
                 jobs[sid]["status"]    = "completed"
                 jobs[sid]["clip_path"] = str(clip_path)

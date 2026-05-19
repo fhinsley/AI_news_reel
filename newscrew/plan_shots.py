@@ -72,58 +72,190 @@ def load_json(path: Path) -> dict | list | None:
 
 def build_segments(stories: dict, jobs: dict | None) -> list[dict]:
     """
-    Walk stories.json sections (list format) and emit one segment per
-    section intro and one segment per story, with shot mode and anchor
-    assignment applied.  anchor_clip is back-filled from anchor_jobs.json
-    when available.
+    Walk stories.json and emit segments in broadcast order:
+      - episode intro   (if stories["intro"] is present and non-empty)
+      - per section:    bumper (if section["bumper"] is present and non-empty)
+                        wide section opener (always — rest images, no clip needed)
+                        stories (alternating A/B)
+      - episode outro   (if stories["outro"] is present and non-empty)
     """
-    anchor_lookup = {a["id"]: a for a in ANCHORS}
     segments      = []
     story_counter = 0
+
+    # ── Episode intro ──────────────────────────────────────────────────────────
+    if stories.get("intro", "").strip():
+        intro_id = "__intro__"
+        segments.append(_make_segment(
+            segment_id           = intro_id,
+            shot_mode            = "bumper",
+            anchor_id            = ANCHOR_LEAD,
+            lower_third_headline = None,
+            lower_third_source   = None,
+            transition_in        = "cut",
+            transition_out       = "cut",
+            anchor_clip          = _clip_path(intro_id, jobs),
+            comment              = "Episode intro — wall default + voice",
+        ))
 
     for section_data in stories["sections"]:
         section_name = section_data["section"]
 
-        # ── Section intro segment ──────────────────────────────────────────
-        intro_id = f"{section_name}__intro"
-        segments.append(
-            _make_segment(
-                segment_id          = intro_id,
-                shot_mode           = "wide",
-                anchor_id           = ANCHOR_LEAD,
-                lower_third_headline= section_name,
-                lower_third_source  = None,
-                transition_in       = "cut" if not segments else "crossfade",
-                transition_out      = "crossfade",
-                anchor_clip         = _clip_path(intro_id, jobs),
-                comment             = f"Section opener — wide shot, {ANCHOR_LEAD} leads",
-            )
-        )
+        # ── Section bumper ─────────────────────────────────────────────────────
+        if section_data.get("bumper", "").strip():
+            bumper_id = f"{section_name}__bumper"
+            segments.append(_make_segment(
+                segment_id           = bumper_id,
+                shot_mode            = "bumper",
+                anchor_id            = ANCHOR_LEAD,
+                lower_third_headline = section_name,
+                lower_third_source   = None,
+                transition_in        = "cut",
+                transition_out       = "cut",
+                anchor_clip          = _clip_path(bumper_id, jobs),
+                comment              = f"Section bumper — {section_name}",
+            ))
 
-        # ── Story segments ─────────────────────────────────────────────────
+        # ── Story segments ─────────────────────────────────────────────────────
         for story in section_data.get("stories", []):
-            anchor    = SEAT_ANCHORS[story_counter % 2]
-            anchor_id = anchor["id"]
-            shot_mode = SOLO_SHOT.get(anchor_id, "solo_a")
+            story_anchor = SEAT_ANCHORS[story_counter % 2]
+            other_anchor = SEAT_ANCHORS[(story_counter + 1) % 2]
 
-            # Segment ID matches anchor_renderer.py's convention
+            # toss_to overrides who delivers pre/post lines
+            toss_id        = story.get("toss_to", "").strip()
+            toss_anchor_id = toss_id if toss_id else other_anchor["id"]
+
             headline  = story.get("title", story.get("headline", "untitled"))
             seg_id    = f"{section_name}__{headline[:40]}"
+            shot_mode = SOLO_SHOT.get(story_anchor["id"], "solo_a")
 
-            segments.append(
-                _make_segment(
-                    segment_id          = seg_id,
-                    shot_mode           = shot_mode,
-                    anchor_id           = anchor_id,
-                    lower_third_headline= headline,
-                    lower_third_source  = story.get("source_name"),
-                    transition_in       = "crossfade",
-                    transition_out      = "cut",
-                    anchor_clip         = _clip_path(seg_id, jobs),
-                    comment             = f"{anchor_id} reads story {story_counter + 1}",
-                )
+            has_break = (
+                story.get("break_after") is not None
+                and story.get("break_question", "").strip()
+                and story.get("break_response_lead", "").strip()
             )
+
+            has_broll = story.get("broll_after") is not None
+
+            # ── pre_story ──────────────────────────────────────────────────
+            if story.get("pre_story", "").strip():
+                pre_id = f"{seg_id}__pre"
+                toss_shot = SOLO_SHOT.get(toss_anchor_id, "solo_a")
+                segments.append(_make_segment(
+                    segment_id           = pre_id,
+                    shot_mode            = toss_shot,
+                    anchor_id            = toss_anchor_id,
+                    lower_third_headline = None,
+                    lower_third_source   = None,
+                    transition_in        = "cut",
+                    transition_out       = "cut",
+                    anchor_clip          = _clip_path(pre_id, jobs),
+                    comment              = f"{toss_anchor_id} tosses to {story_anchor['id']}",
+                ))
+
+            # ── story body part A ──────────────────────────────────────────
+            segments.append(_make_segment(
+                segment_id           = seg_id,
+                shot_mode            = shot_mode,
+                anchor_id            = story_anchor["id"],
+                lower_third_headline = headline,
+                lower_third_source   = story.get("source_name"),
+                transition_in        = "crossfade",
+                transition_out       = "cut",
+                anchor_clip          = _clip_path(seg_id, jobs),
+                comment              = f"{story_anchor['id']} reads story {story_counter + 1}",
+            ))
+
+            # ── broll window ───────────────────────────────────────────────
+            if has_broll:
+                broll_id = f"{seg_id}__broll_voice"
+                segments.append(_make_segment(
+                    segment_id           = broll_id,
+                    shot_mode            = "broll",
+                    anchor_id            = story_anchor["id"],
+                    lower_third_headline = headline,
+                    lower_third_source   = story.get("source_name"),
+                    transition_in        = "cut",
+                    transition_out       = "cut",
+                    anchor_clip          = _clip_path(broll_id, jobs),
+                    comment              = f"B-roll — {story_anchor['id']} voice over video",
+                ))
+                # Return to anchor if broll_return index doesn't reach end of sentences
+                broll_return = story.get("broll_return")
+                n_sentences  = len(story.get("sentences", []))
+                if broll_return is not None and int(broll_return) < n_sentences:
+                    broll_r_id = f"{seg_id}__broll_return"
+                    segments.append(_make_segment(
+                        segment_id           = broll_r_id,
+                        shot_mode            = shot_mode,
+                        anchor_id            = story_anchor["id"],
+                        lower_third_headline = headline,
+                        lower_third_source   = story.get("source_name"),
+                        transition_in        = "cut",
+                        transition_out       = "cut",
+                        anchor_clip          = _clip_path(broll_r_id, jobs),
+                        comment              = f"{story_anchor['id']} returns after broll",
+                    ))
+
+            # ── mid-story break ────────────────────────────────────────────
+            if has_break:
+                break_q_id = f"{seg_id}__break_q"
+                break_r_id = f"{seg_id}__break_r"
+                toss_shot  = SOLO_SHOT.get(toss_anchor_id, "solo_a")
+                segments.append(_make_segment(
+                    segment_id           = break_q_id,
+                    shot_mode            = toss_shot,
+                    anchor_id            = toss_anchor_id,
+                    lower_third_headline = None,
+                    lower_third_source   = None,
+                    transition_in        = "cut",
+                    transition_out       = "cut",
+                    anchor_clip          = _clip_path(break_q_id, jobs),
+                    comment              = f"{toss_anchor_id} asks break question",
+                ))
+                segments.append(_make_segment(
+                    segment_id           = break_r_id,
+                    shot_mode            = shot_mode,
+                    anchor_id            = story_anchor["id"],
+                    lower_third_headline = headline,
+                    lower_third_source   = story.get("source_name"),
+                    transition_in        = "cut",
+                    transition_out       = "cut",
+                    anchor_clip          = _clip_path(break_r_id, jobs),
+                    comment              = f"{story_anchor['id']} responds and continues",
+                ))
+
+            # ── post_story ─────────────────────────────────────────────────
+            if story.get("post_story", "").strip():
+                post_id   = f"{seg_id}__post"
+                toss_shot = SOLO_SHOT.get(toss_anchor_id, "solo_a")
+                segments.append(_make_segment(
+                    segment_id           = post_id,
+                    shot_mode            = toss_shot,
+                    anchor_id            = toss_anchor_id,
+                    lower_third_headline = None,
+                    lower_third_source   = None,
+                    transition_in        = "cut",
+                    transition_out       = "cut",
+                    anchor_clip          = _clip_path(post_id, jobs),
+                    comment              = f"{toss_anchor_id} reacts to story {story_counter + 1}",
+                ))
+
             story_counter += 1
+
+    # ── Episode outro ──────────────────────────────────────────────────────────
+    if stories.get("outro", "").strip():
+        outro_id = "__outro__"
+        segments.append(_make_segment(
+            segment_id           = outro_id,
+            shot_mode            = "bumper",
+            anchor_id            = ANCHOR_LEAD,
+            lower_third_headline = None,
+            lower_third_source   = None,
+            transition_in        = "cut",
+            transition_out       = "cut",
+            anchor_clip          = _clip_path(outro_id, jobs),
+            comment              = "Episode outro — wall default + voice",
+        ))
 
     return segments
 

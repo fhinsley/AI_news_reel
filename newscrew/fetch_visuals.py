@@ -31,13 +31,18 @@ from config import (
     BROLL_STRATEGY,
 )
 
-PEXELS_SEARCH_URL = "https://api.pexels.com/v1/search"
-DALLE_URL         = "https://api.openai.com/v1/images/generations"
+PEXELS_SEARCH_URL       = "https://api.pexels.com/v1/search"
+PEXELS_VIDEO_SEARCH_URL = "https://api.pexels.com/videos/search"
+DALLE_URL               = "https://api.openai.com/v1/images/generations"
 
-# Pexels: landscape orientation, largest available size
+# Pexels photo settings
 PEXELS_ORIENTATION = "landscape"
 PEXELS_SIZE        = "large"
-PEXELS_PER_PAGE    = 5   # fetch top N, use the first one
+PEXELS_PER_PAGE    = 5
+
+# Pexels video settings — "medium" file is typically 1280×720, good balance of quality/size
+PEXELS_VIDEO_MIN_WIDTH  = 1280
+PEXELS_VIDEO_QUALITY    = "hd"   # prefer hd files
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -54,10 +59,8 @@ def save_json(path: Path, data: dict) -> None:
 
 def build_story_index(stories: dict) -> dict[str, dict]:
     """
-    Build a flat lookup from segment_id → story dict.
-    Segment IDs are constructed the same way plan_shots.py and
-    anchor_renderer.py build them: "{section}__{title[:40]}".
-    Section intros have no story record and are excluded.
+    Build a flat lookup from base_segment_id → story dict.
+    Handles suffixed IDs like __broll_voice by stripping known suffixes.
     """
     index = {}
     for section_data in stories["sections"]:
@@ -69,6 +72,15 @@ def build_story_index(stories: dict) -> dict[str, dict]:
     return index
 
 
+def _base_seg_id(seg_id: str) -> str:
+    """Strip known suffixes to get the base segment ID for story lookup."""
+    for suffix in ("__broll_voice", "__broll_return", "__pre", "__post",
+                   "__break_q", "__break_r"):
+        if seg_id.endswith(suffix):
+            return seg_id[: -len(suffix)]
+    return seg_id
+
+
 def broll_segments(plan: dict) -> list[dict]:
     """Return segments that need a b-roll image fetched."""
     return [
@@ -78,6 +90,44 @@ def broll_segments(plan: dict) -> list[dict]:
 
 
 # ── Pexels ─────────────────────────────────────────────────────────────────────
+
+def fetch_pexels_video(query: str) -> str | None:
+    """
+    Search Pexels for a video clip matching query.
+    Returns the URL of the best HD video file, or None if nothing usable.
+    """
+    if not PEXELS_API_KEY:
+        return None
+    headers = {"Authorization": PEXELS_API_KEY}
+    params  = {
+        "query":    query,
+        "per_page": PEXELS_PER_PAGE,
+        "size":     "medium",
+    }
+    try:
+        resp = requests.get(PEXELS_VIDEO_SEARCH_URL, headers=headers, params=params, timeout=15)
+        resp.raise_for_status()
+        videos = resp.json().get("videos", [])
+        if not videos:
+            return None
+        # Pick first video, prefer HD file ≥ 1280px wide
+        for video in videos:
+            files = video.get("video_files", [])
+            hd_files = [
+                f for f in files
+                if f.get("quality") == PEXELS_VIDEO_QUALITY
+                and f.get("width", 0) >= PEXELS_VIDEO_MIN_WIDTH
+            ]
+            if hd_files:
+                return hd_files[0]["link"]
+            # Fall back to any file from this video
+            if files:
+                return sorted(files, key=lambda f: f.get("width", 0), reverse=True)[0]["link"]
+        return None
+    except requests.RequestException as exc:
+        print(f"    Pexels video request failed: {exc}")
+        return None
+
 
 def fetch_pexels(query: str) -> str | None:
     """
@@ -180,12 +230,21 @@ def fetch_for_segment(seg: dict, story: dict | None, dry_run: bool) -> str | Non
     dest_stem = seg_id.replace(" ", "_").replace("/", "-")
     image_url = None
     used_strategy = None
+    is_video = False
 
     for strategy in BROLL_STRATEGY:
         if strategy == "pexels":
-            image_url = fetch_pexels(query)
-            if image_url:
-                used_strategy = "pexels"
+            # Try video first, then photo
+            video_url = fetch_pexels_video(query)
+            if video_url:
+                image_url     = video_url
+                used_strategy = "pexels_video"
+                is_video      = True
+                break
+            photo_url = fetch_pexels(query)
+            if photo_url:
+                image_url     = photo_url
+                used_strategy = "pexels_photo"
                 break
             print("    Pexels: no results, trying next strategy...")
 
@@ -197,10 +256,11 @@ def fetch_for_segment(seg: dict, story: dict | None, dry_run: bool) -> str | Non
             print("    DALL-E: generation failed, no further fallback.")
 
     if not image_url:
-        print(f"    ✗ No image found for segment.")
+        print(f"    ✗ No asset found for segment.")
         return None
 
-    dest = BROLL_DIR / f"{dest_stem}.jpg"
+    ext  = ".mp4" if is_video else ".jpg"
+    dest = BROLL_DIR / f"{dest_stem}{ext}"
     success = download_image(image_url, dest)
     if success:
         print(f"    ✓ Saved ({used_strategy}): {dest.name}")
@@ -236,7 +296,7 @@ def main() -> int:
 
     for seg in targets:
         seg_id = seg["segment_id"]
-        story  = story_index.get(seg_id)
+        story  = story_index.get(_base_seg_id(seg_id))
 
         if not story and not seg.get("lower_third_headline"):
             print(f"  [{seg_id}] — no story or headline found, skipping.")

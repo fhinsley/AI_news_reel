@@ -8,7 +8,7 @@ WEEKLY_ROOT  = PROJECT_ROOT / "episodes"
 
 
 # TODO: automate episode directory creation based on current date, and move completed episode folders to an archive directory
-END_DATE     = date(2026, 5, 7)   # update each week
+END_DATE     = date(2026, 5, 19)   # update each week
 EPISODE_DIR  = WEEKLY_ROOT / END_DATE.strftime("%m%d%y_Episode")
 
 STORIES_JSON      = EPISODE_DIR / "stories.json"
@@ -43,68 +43,77 @@ HEYGEN_BACKGROUND_COLOR  = "#00FF00"                         # green screen for 
 # ANCHOR_LEAD and story alternation are driven by id and seat, not list order.
 ANCHORS = [
     {
-        "id":        "Annie",
-        "seat":      None,
-        "avatar_id": "Annie_expressive_public",
-        "voice_id":  "e1ccd6ecac8e4c15819ad143efdd4ce2",
-        "label":     "Anchor A",
+        "id":         "Annie",
+        "seat":       None,
+        "avatar_id":  "Annie_expressive_public",
+        "voice_id":   "e1ccd6ecac8e4c15819ad143efdd4ce2",
+        "label":      "Anchor A",
+        "crop_bottom": 30,
     },
     {
-        "id":        "Vesperi",
-        "seat":      None,
-        "avatar_id": "621884a0add3422cb3e26474fb1d9e7b",
-        "voice_id":  "b2c1c902ef1d45108c03e18bff601efe",
-        "label":     "Anchor B",
+        "id":         "Vesperi",
+        "seat":       None,
+        "avatar_id":  "621884a0add3422cb3e26474fb1d9e7b",
+        "voice_id":   "b2c1c902ef1d45108c03e18bff601efe",
+        "label":      "Anchor B",
+        "crop_bottom": 30,
     },
     {
-        "id":        "Daphne",
-        "seat":      None,
-        "avatar_id": "Daphne_public_4",
-        "voice_id":  "812d4eea4a8442a382dcaf2dbaddbd93",
-        "label":     "Anchor C",
+        "id":         "Daphne",
+        "seat":       None,
+        "avatar_id":  "Daphne_public_4",
+        "voice_id":   "812d4eea4a8442a382dcaf2dbaddbd93",
+        "label":      "Anchor C",
+        "crop_bottom": 30,
     },
     {
-        "id":        "Gabrielle",
-        "seat":      None,
-        "avatar_id": "bbb7020a766f429e811c1b23fcecf987",
-        "voice_id":  "ca320fd62b784352af74d06a16a6ef3d",
-        "label":     "Anchor D",
+        "id":         "Gabrielle",
+        "seat":       None,
+        "avatar_id":  "bbb7020a766f429e811c1b23fcecf987",
+        "voice_id":   "ca320fd62b784352af74d06a16a6ef3d",
+        "label":      "Anchor D",
+        "crop_bottom": 30,
     },
     {
-        "id":        "Saskia",
-        "seat":      "a",
-        "avatar_id": "Saskia_public_1",
-        "voice_id":  "a4a6df6d4fc248829f72edde5529defa",
-        "label":     "Anchor E",
+        "id":         "Saskia",
+        "seat":       "a",
+        "avatar_id":  "Saskia_public_1",
+        "voice_id":   "a4a6df6d4fc248829f72edde5529defa",
+        "label":      "Anchor E",
+        "crop_bottom": 30,
     },
     {
-        "id":        "Darlene",
-        "seat":      None,
-        "avatar_id": "6ab4b4c705d14773bb0cb7c1dda31db0",
-        "voice_id":  "d6a657274b184772ac28a6146f729d3a",
-        "label":     "Anchor F",
+        "id":         "Darlene",
+        "seat":       None,
+        "avatar_id":  "6ab4b4c705d14773bb0cb7c1dda31db0",
+        "voice_id":   "d6a657274b184772ac28a6146f729d3a",
+        "label":      "Anchor F",
+        "crop_bottom": 30,
     },
     {
-        "id":        "Minho",
-        "seat":      None,
-        "avatar_id": "Minho_public_2",
-        "voice_id":  "de650d5d1a7f46c4a6e1549d127d250c",
-        "label":     "Anchor G",
+        "id":         "Minho",
+        "seat":       None,
+        "avatar_id":  "Minho_public_2",
+        "voice_id":   "de650d5d1a7f46c4a6e1549d127d250c",
+        "label":      "Anchor G",
+        "crop_bottom": 30,
     },
     {
-        "id":        "Albert",
-        "seat":      None,
-        "avatar_id": "Albert_public_2",
-        "voice_id":  "c0590110f2c94e01b349237e78edb7d1",
-        "label":     "Anchor H",
+        "id":         "Albert",
+        "seat":       None,
+        "avatar_id":  "Albert_public_2",
+        "voice_id":   "c0590110f2c94e01b349237e78edb7d1",
+        "label":      "Anchor H",
+        "crop_bottom": 30,
     },
     {
-        "id":        "Brandon",
-        "seat":      "b",
-        "avatar_id": "Brandon_expressive2_public",
-        "voice_id":  "543ac3d42fcf41dfb6fc673e5e3da825",
-        "label":     "Anchor I",
-    }
+        "id":         "Brandon",
+        "seat":       "b",
+        "avatar_id":  "Brandon_expressive2_public",
+        "voice_id":   "543ac3d42fcf41dfb6fc673e5e3da825",
+        "label":      "Anchor I",
+        "crop_bottom": 20,
+    },
 ]
 
 
@@ -141,10 +150,9 @@ ANCHOR_B_FRAME = (1155, 330, 250)  # right seat
 ANCHOR_A_SOLOFRAME = (290, 260, 710, 399)   # full-left for solo shots
 ANCHOR_B_SOLOFRAME = (920, 260, 710, 399)   # full-right for solo shots
 ANCHOR_VIDEO_FRAME = (850, 300, 192, 140)   # full-left for solo shots (same as solo frame for now)
-# Pixels cropped from bottom of anchor clip to simulate desk occlusion.
-# Increase if the desk cuts higher into the anchor's torso.
-ANCHOR_CROP_BOTTOM = 30
-ANCHOR_SOLO_CROP_BOTTOM = 0
+# Fallback crop_bottom used only if an anchor entry is missing the field.
+# Prefer setting crop_bottom per anchor in the ANCHORS list above.
+ANCHOR_CROP_BOTTOM_DEFAULT = 30
 # Wall-mounted B-roll screen (center-back of set)
 WALL_SCREEN_FRAME = (640, 160, 657, 327)   # (x, y, w, h)
 # PiP anchor insert used in "broll" shot mode
@@ -165,6 +173,10 @@ LOWER_THIRD_SOURCE_SIZE    = 24
 
 # Crossfade duration in seconds (used when transition = "crossfade")
 CROSSFADE_DURATION = 0.4
+
+# Pre-roll audio hold in seconds — how long the anchor is visible on screen
+# before their audio begins after a hard cut (simulates camera catching up to speaker).
+PRE_ROLL_HOLD = 0.25
 
 # Shot plan path for the current episode
 SHOT_PLAN_JSON = EPISODE_DIR / "shot_plan.json"

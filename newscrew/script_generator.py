@@ -39,7 +39,11 @@ NEWSCREW_SCHEMA_BLOCK = """\
 Each story object must include these fields:
 
   "title":            Story title under 60 characters, no period
-  "body":             Story text, [TEXT MIN] to [TEXT MAX] characters
+  "sentences":        Array of strings — the story broken into individual sentences.
+                      Total length across all sentences must be [TEXT MIN] to [TEXT MAX] characters.
+                      Each sentence is a single broadcast-style sentence, complete and self-contained.
+                      Do not add break_after, break_question, or break_response_lead — those are
+                      editorial fields added manually after generation.
   "source_name":      Publication name
   "source_url":       "https://..."
   "broll_search_term": 3 to 6 words suitable for a stock photo search engine.
@@ -244,11 +248,14 @@ def validate_and_report(data: dict) -> None:
         print(f"\n  [{name}] — {len(stories)} stories{count_flag}")
 
         for i, story in enumerate(stories, 1):
-            body       = story.get("body", "")
+            sentences  = story.get("sentences", [])
+            body       = " ".join(sentences)
             char_count = len(body)
             flags      = []
 
-            if char_count < config.STORY_LEN_MIN:
+            if not sentences:
+                flags.append("MISSING sentences")
+            elif char_count < config.STORY_LEN_MIN:
                 flags.append(f"SHORT ({char_count} chars)")
             elif char_count > config.STORY_LEN_MAX:
                 flags.append(f"LONG ({char_count} chars)")
@@ -257,7 +264,7 @@ def validate_and_report(data: dict) -> None:
                 flags.append("MISSING broll_search_term")
 
             flag_str = f"  ⚠ {', '.join(flags)}" if flags else ""
-            print(f"    Story {i}: {story.get('title', 'no title')[:55]}{flag_str}")
+            print(f"    Story {i}: {story.get('title', 'no title')[:55]}  [{len(sentences)} sentences]{flag_str}")
 
     if total_stories != EXPECTED_TOTAL:
         print(f"\n  ⚠ TOTAL STORY COUNT: got {total_stories}, expected {EXPECTED_TOTAL}")
