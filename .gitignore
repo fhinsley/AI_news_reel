@@ -39,3 +39,6 @@ scripts/youtube_token.pickle
 
 # Local generated history
 newsreel_story_history.json
+
+# NewsCrew generated planning artifact
+newscrew/shot_plan.json
