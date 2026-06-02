@@ -133,37 +133,58 @@ def main() -> int:
     styles = build_styles()
     story = []
 
+    # Detect schema shape
+    is_flat = "stories" in data and "sections" not in data
+
     # --- Title block ---
-    week_of = data.get("week_of", "")
-    story.append(Paragraph("AI Newsreel", styles["title"]))
-    story.append(Paragraph(f"Week of {week_of}", styles["subtitle"]))
+    if is_flat:
+        as_of = data.get("as_of", "")
+        story.append(Paragraph("Political Newsreel", styles["title"]))
+        story.append(Paragraph(f"As of {as_of}", styles["subtitle"]))
+    else:
+        week_of = data.get("week_of", "")
+        story.append(Paragraph("AI Newsreel", styles["title"]))
+        story.append(Paragraph(f"Week of {week_of}", styles["subtitle"]))
+
     story.append(HRFlowable(width="100%", thickness=1,
                              color=colors.HexColor("#1a1a2e"), spaceAfter=16))
 
-    # --- Sections and stories ---
-    seen_sources = {}  # name -> url, insertion-ordered
+    # --- Stories ---
+    seen_sources = {}
 
-    for section in data.get("sections", []):
-        section_name = section.get("section", "")
-        story.append(Paragraph(section_name, styles["section"]))
-        story.append(HRFlowable(width="100%", thickness=0.5,
-                                 color=colors.HexColor("#cccccc"), spaceAfter=4))
-
-        for article in section.get("stories", []):
-            title    = article.get("title", "").strip()
-            body     = article.get("body",  "").strip()
-            src_name = article.get("source_name", "").strip()
-            src_url  = article.get("source_url",  "").strip()
-
+    if is_flat:
+        for article in data.get("stories", []):
+            title      = article.get("title", "").strip()
+            sentences  = article.get("sentences", [])
+            body       = " ".join(sentences).strip()
+            src_name   = article.get("source_name", "").strip()
+            src_url    = article.get("source_url", "").strip()
             if title:
                 story.append(Paragraph(title, styles["story_title"]))
             if body:
                 story.append(Paragraph(body, styles["body"]))
-
             if src_name and src_name not in seen_sources:
                 seen_sources[src_name] = src_url
-
         story.append(Spacer(1, 0.1 * inch))
+    else:
+        for section in data.get("sections", []):
+            section_name = section.get("section", "")
+            story.append(Paragraph(section_name, styles["section"]))
+            story.append(HRFlowable(width="100%", thickness=0.5,
+                                     color=colors.HexColor("#cccccc"), spaceAfter=4))
+            for article in section.get("stories", []):
+                title     = article.get("title", "").strip()
+                sentences = article.get("sentences", [])
+                body      = " ".join(sentences).strip()
+                src_name  = article.get("source_name", "").strip()
+                src_url   = article.get("source_url", "").strip()
+                if title:
+                    story.append(Paragraph(title, styles["story_title"]))
+                if body:
+                    story.append(Paragraph(body, styles["body"]))
+                if src_name and src_name not in seen_sources:
+                    seen_sources[src_name] = src_url
+            story.append(Spacer(1, 0.1 * inch))
 
     # --- Sources ---
     story.append(HRFlowable(width="100%", thickness=1,
@@ -185,8 +206,8 @@ def main() -> int:
         rightMargin=1 * inch,
         topMargin=1 * inch,
         bottomMargin=1 * inch,
-        title=f"AI Newsreel — {week_of}",
-        author="AI Newsreel",
+        title=f"Newsreel — {data.get('week_of') or data.get('as_of', '')}",
+        author="NewsCrew",
     )
     doc.build(story)
 

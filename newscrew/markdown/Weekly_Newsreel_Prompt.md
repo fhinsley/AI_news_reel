@@ -22,40 +22,18 @@ Schema:
 
 {
   "week_of": "[START DATE] to [END DATE]",
-  "sections": [
+  "stories": [
     {
-      "section": "Core Tech Releases",
-      "stories": [
-        {
-          [SCHEMA BLOCK]
-        }
-      ]
-    },
-    {
-      "section": "Directions in AI Architecture",
-      "stories": [...]
-    },
-    {
-      "section": "AI For Productivity",
-      "stories": [...]
-    },
-    {
-      "section": "World Impact",
-      "stories": [...]
+      [SCHEMA BLOCK]
     }
   ]
 }
 
-SECTIONS — use these names exactly, in this order:
-1. Core Tech Releases
-2. Directions in AI Architecture
-3. AI For Productivity
-4. World Impact
-
 STORY COUNT:
-- Sections "Core Tech Releases" and "Directions in AI Architecture" should each have 2 stories
-- Sections "AI For Productivity" and "World Impact" should each have 1 story
-- Total: exactly 6 stories across all four sections. Do not add extra stories.
+- Return exactly 6 stories.
+- Rank by significance — lead with the most important development.
+- Drop a story slot rather than padding with a weak story.
+- Total: exactly 6 stories. Do not add extra stories.
 
 BODY LENGTH:
 - Each body must be [TEXT MIN] to [TEXT MAX] characters.
@@ -78,7 +56,8 @@ CONTENT FILTER — omit any story involving:
 - Politically polarizing topics.
 - Stories that could divide a mixed corporate audience.
 
-DEDUPLICATION — across all four sections:
+DEDUPLICATION — across all stories:
 - Each company, product, or model name may appear in only one story.
-- If a development could fit multiple sections, place it in the most relevant one only.
-- Do not report on the same event or announcement from two different angles across sections.
+- If the same event appears in multiple sources, use the most detailed version and cite the primary source only.
+- Do not report on the same event or announcement from two different angles.
+- Do not use one story to recap or reference another story in the same output.

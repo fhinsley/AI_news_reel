@@ -6,7 +6,7 @@ constants before doing a full render.
 Each frame is drawn as a labeled colored rectangle:
     - ANCHOR_A_FRAME      green  — left seat anchor position
     - ANCHOR_B_FRAME      cyan   — right seat anchor position
-    - ANCHOR_CROP_BOTTOM  red    — crop line across each anchor frame
+    - ANCHOR_CROP_BOTTOM_DEFAULT  red    — crop line across each anchor frame
     - ANCHOR_SOLO_CROP_BOTTOM red    — crop line for solo anchor frames (if different)
     - WALL_SCREEN_FRAME   yellow — b-roll wall screen
     - ANCHOR_A_SOLOFRAME  grey  — left seat anchor position
@@ -40,7 +40,7 @@ from config import (
     SOLO_B_LOWER_THIRD_FRAME,
     ANCHOR_A_FRAME,
     ANCHOR_B_FRAME,
-    ANCHOR_CROP_BOTTOM,
+    ANCHOR_CROP_BOTTOM_DEFAULT,
     ANCHOR_SOLO_CROP_BOTTOM,
     WALL_SCREEN_FRAME,
     ANCHOR_A_SOLOFRAME,
@@ -88,7 +88,7 @@ def draw_frame(draw, frame, color, label, font):
 
 
 def draw_crop_line(draw, frame, crop_bottom, color="#FF3333"):
-    """Draw the ANCHOR_CROP_BOTTOM line across an anchor frame."""
+    """Draw the ANCHOR_CROP_BOTTOM_DEFAULT line across an anchor frame."""
     x, y, w, h = frame
     crop_y = y + h - crop_bottom
     draw.line([(x, crop_y), (x + w, crop_y)], fill=color, width=2)
@@ -139,8 +139,8 @@ def main():
     ]:
         x, y, fw = frame
         rw, rh = anchor_rendered_size(fw)
-        # Subtract ANCHOR_CROP_BOTTOM from rendered height
-        rh_cropped = max(1, rh - ANCHOR_CROP_BOTTOM)
+        # Subtract ANCHOR_CROP_BOTTOM_DEFAULT from rendered height
+        rh_cropped = max(1, rh - ANCHOR_CROP_BOTTOM_DEFAULT)
         r = int(color[1:3], 16)
         g = int(color[3:5], 16)
         b = int(color[5:7], 16)
@@ -166,7 +166,7 @@ def main():
     print(f"\nFrame values from config.py:")
     print(f"  ANCHOR_A_FRAME     = {ANCHOR_A_FRAME}")
     print(f"  ANCHOR_B_FRAME     = {ANCHOR_B_FRAME}")
-    print(f"  ANCHOR_CROP_BOTTOM = {ANCHOR_CROP_BOTTOM}")
+    print(f"  ANCHOR_CROP_BOTTOM_DEFAULT = {ANCHOR_CROP_BOTTOM_DEFAULT}")
     print(f"  ANCHOR_SOLO_CROP_BOTTOM = {ANCHOR_SOLO_CROP_BOTTOM}")
     print(f"  WALL_SCREEN_FRAME  = {WALL_SCREEN_FRAME}")
     print(f"  ANCHOR_A_SOLOFRAME = {ANCHOR_A_SOLOFRAME}")

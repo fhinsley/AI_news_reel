@@ -70,6 +70,15 @@ def load_json(path: Path) -> dict | list | None:
     return None
 
 
+def _iter_sections(stories: dict):
+    """Yield (section_name, bumper_text, story_list) for sectioned or flat schemas."""
+    if "sections" in stories:
+        for sec in stories["sections"]:
+            yield sec.get("section", ""), sec.get("bumper", ""), sec.get("stories", [])
+    else:
+        yield "", "", stories.get("stories", [])
+
+
 def build_segments(stories: dict, jobs: dict | None) -> list[dict]:
     """
     Walk stories.json and emit segments in broadcast order:
@@ -97,26 +106,25 @@ def build_segments(stories: dict, jobs: dict | None) -> list[dict]:
             comment              = "Episode intro — wall default + voice",
         ))
 
-    for section_data in stories["sections"]:
-        section_name = section_data["section"]
+    for section_name, bumper_text, story_list in _iter_sections(stories):
 
         # ── Section bumper ─────────────────────────────────────────────────────
-        if section_data.get("bumper", "").strip():
-            bumper_id = f"{section_name}__bumper"
+        if bumper_text.strip():
+            bumper_id = f"{section_name}__bumper" if section_name else "__bumper__"
             segments.append(_make_segment(
                 segment_id           = bumper_id,
                 shot_mode            = "bumper",
                 anchor_id            = ANCHOR_LEAD,
-                lower_third_headline = section_name,
+                lower_third_headline = section_name or None,
                 lower_third_source   = None,
                 transition_in        = "cut",
                 transition_out       = "cut",
                 anchor_clip          = _clip_path(bumper_id, jobs),
-                comment              = f"Section bumper — {section_name}",
+                comment              = f"Section bumper — {section_name or 'intro'}",
             ))
 
         # ── Story segments ─────────────────────────────────────────────────────
-        for story in section_data.get("stories", []):
+        for story in story_list:
             story_anchor = SEAT_ANCHORS[story_counter % 2]
             other_anchor = SEAT_ANCHORS[(story_counter + 1) % 2]
 

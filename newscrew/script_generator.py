@@ -1,20 +1,16 @@
 #!/usr/bin/env python3
-"""Generate the weekly newsreel stories via the Anthropic API.
+"""Generate newsreel stories via the Anthropic API.
 
-Reads the prompt template from markdown/Weekly_Newsreel_Prompt.md,
-interpolates the current date range and schema block, sends the request
-to Claude with web search enabled, and writes the resulting JSON to
-<EPISODE_DIR>/stories.json.
+Supports two profiles:
+  --profile ai         Weekly AI newsreel (default)
+  --profile political  Political newsreel — top stories from last NEWS_WINDOW_HOURS
 
-This is step 0 of the NewsCrew pipeline. The JSON is the source of truth
-for all downstream steps (anchor rendering, shot planning, visual fetch,
-video build).
-
-The .md prompt template is shared with PROJ1 and must not be modified.
-All NewsCrew-specific schema additions (broll_search_term) are injected
-here via the [SCHEMA_BLOCK] replacement before the prompt is sent.
+Reads the appropriate prompt template from markdown/, interpolates
+config values and schema block, sends to Claude with web search,
+and writes the resulting JSON to <EPISODE_DIR>/stories.json.
 """
 
+import argparse
 import json
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -24,15 +20,7 @@ import anthropic
 import config
 
 # ---------------------------------------------------------------------------
-# Paths
-# ---------------------------------------------------------------------------
-
-PROMPT_FILE = Path(config.PROJECT_ROOT) / "markdown" / "Weekly_Newsreel_Prompt.md"
-
-# ---------------------------------------------------------------------------
-# Schema block — injected into the prompt in place of [SCHEMA_BLOCK].
-# This extends the base story schema from the .md file with fields that
-# NewsCrew needs for video production without touching the shared template.
+# Schema blocks
 # ---------------------------------------------------------------------------
 
 NEWSCREW_SCHEMA_BLOCK = """\
@@ -54,30 +42,63 @@ Each story object must include these fields:
                        "satellite dish night sky", "office worker laptop screen"
 """
 
-def load_prompt() -> str:
-    if not PROMPT_FILE.exists():
-        raise FileNotFoundError(f"Prompt file not found: {PROMPT_FILE}")
+POLITICAL_SCHEMA_BLOCK = """\
+Each story object must include these fields:
 
-    template = PROMPT_FILE.read_text(encoding="utf-8")
+  "title":            Story title under 60 characters, no period
+  "sentences":        Array of strings — the story broken into individual sentences.
+                      Total length across all sentences must be [TEXT MIN] to [TEXT MAX] characters.
+                      Each sentence is a single broadcast-style sentence, complete and self-contained.
+                      Do not add editorial fields — those are added manually after generation.
+  "source_name":      Publication name (e.g. "Politico", "The Guardian")
+  "source_url":       "https://..."
+  "broll_search_term": 3 to 6 words suitable for a stock photo or video search engine.
+                       Concrete and visual. Examples: "capitol building washington dc",
+                       "protest crowd city street", "senate hearing chamber",
+                       "white house press briefing"
+"""
 
-    # Inject exclusion block if history exists
-    history = load_story_history()
-    if history:
-        print(f"Excluding {len(history)} recent story/stories from selection.")
-        exclusion_block = format_exclusion_block(history)
+
+# ---------------------------------------------------------------------------
+# Prompt loading — profile-aware
+# ---------------------------------------------------------------------------
+
+def load_prompt(profile: str) -> str:
+    if profile == "political":
+        prompt_file = config.POLITICAL_PROMPT_FILE
+        schema_block = POLITICAL_SCHEMA_BLOCK
     else:
-        exclusion_block = ""
+        prompt_file = config.AI_PROMPT_FILE
+        schema_block = NEWSCREW_SCHEMA_BLOCK
+
+    if not Path(prompt_file).exists():
+        raise FileNotFoundError(f"Prompt file not found: {prompt_file}")
+
+    template = Path(prompt_file).read_text(encoding="utf-8")
 
     replacements = {
-        "[START DATE]":      config.START_DATE.strftime("%B %d, %Y"),
-        "[END DATE]":        config.END_DATE.strftime("%B %d, %Y"),
-        "[TEXT MIN]":        str(config.STORY_TEXT_MIN),
-        "[TEXT MAX]":        str(config.STORY_TEXT_MAX),
-        "[COPY MIN]":        str(config.STORY_COPY_MIN),
-        "[COPY MAX]":        str(config.STORY_COPY_MAX),
-        "[EXCLUSION BLOCK]": exclusion_block,
-        "[SCHEMA BLOCK]":    NEWSCREW_SCHEMA_BLOCK,
+        "[TEXT MIN]":           str(config.STORY_TEXT_MIN),
+        "[TEXT MAX]":           str(config.STORY_TEXT_MAX),
+        "[COPY MIN]":           str(config.STORY_COPY_MIN),
+        "[COPY MAX]":           str(config.STORY_COPY_MAX),
+        "[SCHEMA BLOCK]":       schema_block,
+        "[NEWS_WINDOW_HOURS]":  str(config.NEWS_WINDOW_HOURS),
+        "[CURRENT DATE AND TIME]": datetime.now().strftime("%B %d, %Y %H:%M"),
     }
+
+    # AI profile only — inject date range and exclusion block
+    if profile == "ai":
+        history = load_story_history()
+        if history:
+            print(f"Excluding {len(history)} recent story/stories from selection.")
+            exclusion_block = format_exclusion_block(history)
+        else:
+            exclusion_block = ""
+        replacements.update({
+            "[START DATE]":      config.START_DATE.strftime("%B %d, %Y"),
+            "[END DATE]":        config.END_DATE.strftime("%B %d, %Y"),
+            "[EXCLUSION BLOCK]": exclusion_block,
+        })
 
     return reduce(
         lambda text, kv: text.replace(kv[0], kv[1]),
@@ -119,22 +140,24 @@ def format_exclusion_block(history: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def append_to_story_history(data: dict) -> None:
-    """Record each story's title into the history file to prevent repeats."""
+def append_to_story_history(data: dict, profile: str) -> None:
+    """Record story titles into history to prevent repeats. Skipped for political profile."""
+    if profile == "political":
+        return   # political news is time-sensitive — no deduplication across runs
+
     entries = []
     if config.STORY_HISTORY_FILE.exists():
         with open(config.STORY_HISTORY_FILE, "r", encoding="utf-8") as f:
             entries = json.load(f)
 
-    for section in data.get("sections", []):
-        for story in section.get("stories", []):
-            summary = story.get("title", "").strip()
-            if summary:
-                entries.append({
-                    "timestamp":     datetime.now().isoformat(),
-                    "topic_summary": summary,
-                    "section":       section.get("section", ""),
-                })
+    for story in data.get("stories", []):
+        summary = story.get("title", "").strip()
+        if summary:
+            entries.append({
+                "timestamp":     datetime.now().isoformat(),
+                "topic_summary": summary,
+                "section":       "",
+            })
 
     entries = entries[-config.STORY_HISTORY_MAX:]
     with open(config.STORY_HISTORY_FILE, "w", encoding="utf-8") as f:
@@ -146,7 +169,8 @@ def append_to_story_history(data: dict) -> None:
 # API call
 # ---------------------------------------------------------------------------
 
-def ensure_episode_dir() -> None:
+def ensure_episode_dir(profile: str) -> None:
+
     config.EPISODE_DIR.mkdir(parents=True, exist_ok=True)
     print(f"Episode folder ready: {config.EPISODE_DIR}")
 
@@ -217,60 +241,66 @@ def generate_stories(prompt: str) -> dict:
 # Validation + output
 # ---------------------------------------------------------------------------
 
-def validate_and_report(data: dict) -> None:
-    """Print a summary and flag stories outside the character target,
-    missing broll_search_term, or with wrong story counts."""
+def validate_and_report(data: dict, profile: str) -> None:
+    """Print a summary and flag issues. Handles both ai (sectioned) and political (flat) schemas."""
 
-    # Expected story counts per section — must match STORY COUNT in the prompt
-    EXPECTED_COUNTS = {
-        "Core Tech Releases":          2,
-        "Directions in AI Architecture": 2,
-        "AI For Productivity":         1,
-        "World Impact":                1,
-    }
-    EXPECTED_TOTAL = sum(EXPECTED_COUNTS.values())
-
-    sections = data.get("sections", [])
-    print(f"\nWeek of: {data.get('week_of', 'unknown')}")
-    print(f"Sections: {len(sections)}")
-
-    total_stories = 0
-    for section in sections:
-        name    = section.get("section", "unnamed")
-        stories = section.get("stories", [])
-        total_stories += len(stories)
-
-        expected = EXPECTED_COUNTS.get(name)
-        count_flag = ""
-        if expected is not None and len(stories) != expected:
-            count_flag = f"  ⚠ WRONG COUNT (got {len(stories)}, expected {expected})"
-
-        print(f"\n  [{name}] — {len(stories)} stories{count_flag}")
-
+    if profile == "political":
+        stories = data.get("stories", [])
+        print(f"\nAs of: {data.get('as_of', 'unknown')}")
+        print(f"Stories: {len(stories)}")
+        if len(stories) != 6:
+            print(f"  ⚠ WRONG COUNT (got {len(stories)}, expected 6)")
         for i, story in enumerate(stories, 1):
             sentences  = story.get("sentences", [])
             body       = " ".join(sentences)
             char_count = len(body)
             flags      = []
-
             if not sentences:
                 flags.append("MISSING sentences")
             elif char_count < config.STORY_LEN_MIN:
                 flags.append(f"SHORT ({char_count} chars)")
             elif char_count > config.STORY_LEN_MAX:
                 flags.append(f"LONG ({char_count} chars)")
-
             if not story.get("broll_search_term"):
                 flags.append("MISSING broll_search_term")
-
             flag_str = f"  ⚠ {', '.join(flags)}" if flags else ""
-            print(f"    Story {i}: {story.get('title', 'no title')[:55]}  [{len(sentences)} sentences]{flag_str}")
+            print(f"  Story {i}: {story.get('title','no title')[:55]}  [{len(sentences)} sentences]{flag_str}")
+        return
 
-    if total_stories != EXPECTED_TOTAL:
-        print(f"\n  ⚠ TOTAL STORY COUNT: got {total_stories}, expected {EXPECTED_TOTAL}")
+    # AI profile — flat schema (sections removed)
+    EXPECTED_TOTAL = 6
+
+    stories = data.get("stories", [])
+    print(f"\nWeek of: {data.get('week_of', 'unknown')}")
+    print(f"Stories: {len(stories)}")
+    if len(stories) != EXPECTED_TOTAL:
+        print(f"  ⚠ WRONG COUNT (got {len(stories)}, expected {EXPECTED_TOTAL})")
+
+    for i, story in enumerate(stories, 1):
+        sentences  = story.get("sentences", [])
+        body       = " ".join(sentences)
+        char_count = len(body)
+        flags      = []
+        if not sentences:
+            flags.append("MISSING sentences")
+        elif char_count < config.STORY_LEN_MIN:
+            flags.append(f"SHORT ({char_count} chars)")
+        elif char_count > config.STORY_LEN_MAX:
+            flags.append(f"LONG ({char_count} chars)")
+        if not story.get("broll_search_term"):
+            flags.append("MISSING broll_search_term")
+        flag_str = f"  ⚠ {', '.join(flags)}" if flags else ""
+        print(f"  Story {i}: {story.get('title','no title')[:55]}  [{len(sentences)} sentences]{flag_str}")
 
 
 def save_stories(data: dict) -> None:
+    # Inject default broll fields into every story that doesn't already have them.
+    # broll_after=1 — B-roll starts after sentence 1
+    # broll_return=3 — anchor returns after sentence 3
+    for story in _all_stories(data):
+        story.setdefault("broll_after",  1)
+        story.setdefault("broll_return", 3)
+
     config.STORIES_JSON.write_text(
         json.dumps(data, indent=2, ensure_ascii=False),
         encoding="utf-8",
@@ -278,18 +308,35 @@ def save_stories(data: dict) -> None:
     print(f"\nStories saved to: {config.STORIES_JSON}")
 
 
+def _all_stories(data: dict) -> list:
+    """Return flat list of all story dicts regardless of schema shape."""
+    if "sections" in data:
+        return [s for sec in data["sections"] for s in sec.get("stories", [])]
+    return data.get("stories", [])
+
+
 # ---------------------------------------------------------------------------
 # Entrypoint
 # ---------------------------------------------------------------------------
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description="NewsCrew script generator")
+    parser.add_argument(
+        "--profile",
+        choices=["ai", "political"],
+        default="ai",
+        help="Prompt profile to use (default: ai)",
+    )
+    args = parser.parse_args()
+
     try:
-        prompt = load_prompt()
-        ensure_episode_dir()
+        print(f"Profile: {args.profile}")
+        prompt = load_prompt(args.profile)
+        ensure_episode_dir(args.profile)
         data = generate_stories(prompt)
-        validate_and_report(data)
+        validate_and_report(data, args.profile)
         save_stories(data)
-        append_to_story_history(data)
+        append_to_story_history(data, args.profile)
         print("\nScript generation complete.")
         return 0
     except Exception as exc:

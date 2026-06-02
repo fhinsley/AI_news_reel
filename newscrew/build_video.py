@@ -44,7 +44,7 @@ Notes:
     - Segments without an anchor_clip are skipped with a warning (not yet rendered).
     - Segments without a broll_clip fall back to the ambient background loop.
     - The desk mask is painted into SET_BACKGROUND_IMAGE — anchor clips are cropped
-      at ANCHOR_CROP_BOTTOM pixels from the bottom to simulate sitting behind the desk.
+      at ANCHOR_CROP_BOTTOM_DEFAULT pixels from the bottom to simulate sitting behind the desk.
     - All geometry constants live in config.py under "# Video / compositor".
 """
 

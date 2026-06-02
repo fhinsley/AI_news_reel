@@ -35,6 +35,49 @@ POLL_INTERVAL_SECONDS = 30
 MAX_POLL_ATTEMPTS     = 60   # 30 min ceiling
 
 
+# ── Schema normalization ───────────────────────────────────────────────────────
+
+def normalize_stories(data: dict) -> list[dict]:
+    """
+    Return a flat list of story dicts regardless of schema shape.
+
+    Sectioned schema (AI profile):
+        data["sections"] = [{"section": "...", "stories": [...], "bumper": "..."}, ...]
+
+    Flat schema (political profile):
+        data["stories"] = [{...}, ...]
+
+    For the flat schema, stories get section="", bumper="" so downstream
+    code that reads those fields gets safe empty defaults.
+    """
+    if "sections" in data:
+        flat = []
+        for sec in data["sections"]:
+            for story in sec.get("stories", []):
+                story = dict(story)
+                story.setdefault("_section", sec.get("section", ""))
+                story.setdefault("_bumper",  sec.get("bumper",  ""))
+                flat.append(story)
+        return flat
+    else:
+        for story in data.get("stories", []):
+            story.setdefault("_section", "")
+            story.setdefault("_bumper",  "")
+        return data.get("stories", [])
+
+
+def iter_sections(data: dict):
+    """
+    Yield (section_name, bumper_text, stories_list) for each logical section.
+    For flat schema yields a single unnamed section with all stories.
+    """
+    if "sections" in data:
+        for sec in data["sections"]:
+            yield sec.get("section", ""), sec.get("bumper", ""), sec.get("stories", [])
+    else:
+        yield "", "", data.get("stories", [])
+
+
 # ── Anchor assignment ──────────────────────────────────────────────────────────
 
 def assign_anchors(stories: dict) -> list[dict]:
@@ -47,6 +90,7 @@ def assign_anchors(stories: dict) -> list[dict]:
                         stories (alternating A/B)
       - episode outro   (top-level stories["outro"] if present)
 
+    Works with both sectioned (AI) and flat (political) schemas.
     Only segments with non-empty script text are submitted.
     """
     anchor_lookup = {a["id"]: a for a in ANCHORS}
@@ -76,23 +120,23 @@ def assign_anchors(stories: dict) -> list[dict]:
             "voice_id":   lead_anchor["voice_id"],
         })
 
-    for section_data in stories["sections"]:
-        section_name = section_data["section"]
+    for section_name, bumper_text, story_list in iter_sections(stories):
 
         # ── Section bumper ─────────────────────────────────────────────────────
-        if bumper_text := section_data.get("bumper", "").strip():
+        if bumper_text.strip():
+            bumper_sid = f"{section_name}__bumper" if section_name else "__bumper__"
             segments.append({
-                "segment_id": f"{section_name}__bumper",
+                "segment_id": bumper_sid,
                 "section":    section_name,
                 "type":       "bumper",
-                "script":     bumper_text,
+                "script":     bumper_text.strip(),
                 "anchor_id":  lead_anchor["id"],
                 "avatar_id":  lead_anchor["avatar_id"],
                 "voice_id":   lead_anchor["voice_id"],
             })
 
         # ── Stories ────────────────────────────────────────────────────────────
-        for story in section_data.get("stories", []):
+        for story in story_list:
             story_anchor    = seat_anchors[story_counter % 2]
             other_anchor    = seat_anchors[(story_counter + 1) % 2]
 

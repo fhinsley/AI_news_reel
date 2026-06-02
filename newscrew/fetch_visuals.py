@@ -60,14 +60,21 @@ def save_json(path: Path, data: dict) -> None:
 def build_story_index(stories: dict) -> dict[str, dict]:
     """
     Build a flat lookup from base_segment_id → story dict.
+    Handles both sectioned (AI) and flat (political) schemas.
     Handles suffixed IDs like __broll_voice by stripping known suffixes.
     """
     index = {}
-    for section_data in stories["sections"]:
-        section_name = section_data["section"]
-        for story in section_data.get("stories", []):
+    if "sections" in stories:
+        for section_data in stories["sections"]:
+            section_name = section_data["section"]
+            for story in section_data.get("stories", []):
+                title  = story.get("title", "")
+                seg_id = f"{section_name}__{title[:40]}"
+                index[seg_id] = story
+    else:
+        for story in stories.get("stories", []):
             title  = story.get("title", "")
-            seg_id = f"{section_name}__{title[:40]}"
+            seg_id = f"__{title[:40]}"
             index[seg_id] = story
     return index
 

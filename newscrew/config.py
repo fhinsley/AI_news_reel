@@ -8,7 +8,7 @@ WEEKLY_ROOT  = PROJECT_ROOT / "episodes"
 
 
 # TODO: automate episode directory creation based on current date, and move completed episode folders to an archive directory
-END_DATE     = date(2026, 5, 19)   # update each week
+END_DATE     = date(2026, 6, 1)   # update each week
 EPISODE_DIR  = WEEKLY_ROOT / END_DATE.strftime("%m%d%y_Episode")
 
 STORIES_JSON      = EPISODE_DIR / "stories.json"
@@ -41,6 +41,9 @@ HEYGEN_BACKGROUND_COLOR  = "#00FF00"                         # green screen for 
 #   "b" → right seat → solo_b → ANCHOR_B_FRAME
 #   omit seat (or set None) for bench anchors not currently on air.
 # ANCHOR_LEAD and story alternation are driven by id and seat, not list order.
+
+
+
 ANCHORS = [
     {
         "id":         "Annie",
@@ -51,11 +54,20 @@ ANCHORS = [
         "crop_bottom": 30,
     },
     {
-        "id":         "Vesperi",
+        "id":         "Connie",
         "seat":       None,
-        "avatar_id":  "621884a0add3422cb3e26474fb1d9e7b",
-        "voice_id":   "b2c1c902ef1d45108c03e18bff601efe",
+        "avatar_id":  "1e0da4348e9748cf883222b832ed8491",
+        "voice_id":   "d774d69075f24d1fb52a0dad145ba809",
         "label":      "Anchor B",
+        "crop_bottom": 30,
+    },
+    {
+        "id":         "Serica",
+        "seat":       None,
+        "avatar_id":  "Jin_Blue_Casual_Front_public",
+        #"avatar_id":  "Violante_Sport_Side_public",
+        "voice_id":   "f5d52985019847c5b0501a445c66dba8",
+        "label":      "Anchor A",
         "crop_bottom": 30,
     },
     {
@@ -99,6 +111,14 @@ ANCHORS = [
         "crop_bottom": 30,
     },
     {
+        "id":         "Shawn",
+        "seat":       "b",
+        "avatar_id":  "Shawn_Suit_Front_public",
+        "voice_id":   "e209b585901e47d28b243e1a5dfc8747",
+        "label":      "Anchor H",
+        "crop_bottom": 30,
+    },
+    {
         "id":         "Albert",
         "seat":       None,
         "avatar_id":  "Albert_public_2",
@@ -108,14 +128,76 @@ ANCHORS = [
     },
     {
         "id":         "Brandon",
+        "seat":       None,
+        "avatar_id":  "Brandon_expressive2_public",
+        "voice_id":   "543ac3d42fcf41dfb6fc673e5e3da825",
+        "label":      "Anchor I",
+        "crop_bottom": 12,
+    },
+]
+
+BRANDON_LOOKS = [
+    
+    {
+        "id":         "Brandon",
         "seat":       "b",
         "avatar_id":  "Brandon_expressive2_public",
         "voice_id":   "543ac3d42fcf41dfb6fc673e5e3da825",
         "label":      "Anchor I",
-        "crop_bottom": 20,
+        "crop_bottom": 12,
     },
 ]
 
+
+SASKIA_LOOKS = [
+ 
+    # Blue Blazer (default look for seat-a lead anchor)
+    {
+        "id":         "Saskia",
+        "seat":       "a",
+        "avatar_id":  "Saskia_public_1",
+        "voice_id":   "a4a6df6d4fc248829f72edde5529defa",
+        "label":      "Anchor E",
+        "crop_bottom": 30,
+    },
+    # Blue Shirt 
+    {
+        "id":         "Saskia",
+        "seat":       "a",
+        "avatar_id":  "Saskia_public_2",
+        "voice_id":   "a4a6df6d4fc248829f72edde5529defa",
+        "label":      "Anchor E",
+        "crop_bottom": 30,
+    },
+    
+    # Grey Vest
+    {
+        "id":         "Saskia",
+        "seat":       "a",
+        "avatar_id":  "Saskia_public_3",
+        "voice_id":   "a4a6df6d4fc248829f72edde5529defa",
+        "label":      "Anchor E",
+        "crop_bottom": 30,
+    },
+    # Green Blazer
+    {
+        "id":         "Saskia",
+        "seat":       "a",
+        "avatar_id":  "Saskia_public_4",
+        "voice_id":   "a4a6df6d4fc248829f72edde5529defa",
+        "label":      "Anchor E",
+        "crop_bottom": 30,
+    },
+    # White Blazer
+    {
+        "id":         "Saskia",
+        "seat":       "a",
+        "avatar_id":  "Saskia_public_5",
+        "voice_id":   "a4a6df6d4fc248829f72edde5529defa",
+        "label":      "Anchor E",
+        "crop_bottom": 30,
+    },
+]
 
 VOICE_CLANCY = "FLpz0UhC9a7CIfUSBo6S"    # Clancy (MAIN)
 VOICE_MAIN   = VOICE_CLANCY           # alias used by newsreel_tts.py
@@ -123,15 +205,7 @@ EL_MODEL_ID  = "eleven_turbo_v2_5"   # ElevenLabs model — update if needed
 
 
 
-# Section order must match stories.json section keys
-SECTIONS = [
-    "Core Tech Releases",
-    "Directions in AI Architecture",
-    "AI For Productivity",
-    "World Impact",
-]
-
-# Anchor assignment: stories alternate A/B globally across all sections.
+# Anchor assignment: stories alternate A/B globally.
 # ANCHOR_LEAD is the anchor that reads the intro and outro.
 ANCHOR_LEAD = "Saskia"
 
@@ -145,14 +219,17 @@ SET_BACKGROUND_IMAGE = str(PROJECT_ROOT / "assets" / "set_background.jpg")
 # Anchor A sits left-of-center; Anchor B sits right-of-center.
 SOLO_A_LOWER_THIRD_FRAME = (290, 600, 710, 40)
 SOLO_B_LOWER_THIRD_FRAME = (920, 600, 710, 40)
-ANCHOR_A_FRAME = (515,  330, 250)   # left seat
-ANCHOR_B_FRAME = (1155, 330, 250)  # right seat
+ANCHOR_A_FRAME = (465,  330, 310)   # left seat
+ANCHOR_B_FRAME = (1095, 330, 310)  # right seat
 ANCHOR_A_SOLOFRAME = (290, 260, 710, 399)   # full-left for solo shots
 ANCHOR_B_SOLOFRAME = (920, 260, 710, 399)   # full-right for solo shots
 ANCHOR_VIDEO_FRAME = (850, 300, 192, 140)   # full-left for solo shots (same as solo frame for now)
+
 # Fallback crop_bottom used only if an anchor entry is missing the field.
 # Prefer setting crop_bottom per anchor in the ANCHORS list above.
-ANCHOR_CROP_BOTTOM_DEFAULT = 30
+ANCHOR_CROP_BOTTOM_DEFAULT = 0
+ANCHOR_SOLO_CROP_BOTTOM = 0 # Test only
+
 # Wall-mounted B-roll screen (center-back of set)
 WALL_SCREEN_FRAME = (640, 160, 657, 327)   # (x, y, w, h)
 # PiP anchor insert used in "broll" shot mode
@@ -173,10 +250,6 @@ LOWER_THIRD_SOURCE_SIZE    = 24
 
 # Crossfade duration in seconds (used when transition = "crossfade")
 CROSSFADE_DURATION = 0.4
-
-# Pre-roll audio hold in seconds — how long the anchor is visible on screen
-# before their audio begins after a hard cut (simulates camera catching up to speaker).
-PRE_ROLL_HOLD = 0.25
 
 # Shot plan path for the current episode
 SHOT_PLAN_JSON = EPISODE_DIR / "shot_plan.json"
@@ -205,6 +278,14 @@ BROLL_STRATEGY  = ["pexels", "dalle"]  # order of preference
 # ── Anthropic / script generation ─────────────────────────────────────────────
 ANTHROPIC_MODEL      = "claude-sonnet-4-6"
 ANTHROPIC_MAX_TOKENS = 4096
+
+# Prompt profiles — select via script_generator.py --profile
+AI_PROMPT_FILE        = PROJECT_ROOT / "markdown" / "Weekly_Newsreel_Prompt.md"
+POLITICAL_PROMPT_FILE = PROJECT_ROOT / "markdown" / "Political_Newsreel.md"
+
+# How many hours back to search for political newsreel stories.
+# Injected into the political prompt as [NEWS_WINDOW_HOURS].
+NEWS_WINDOW_HOURS = 30
 
 # Story body character targets — used by script_generator.py for validation
 # and injected into the prompt template as [TEXT MIN] / [TEXT MAX].
