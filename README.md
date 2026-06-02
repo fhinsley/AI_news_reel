@@ -157,6 +157,9 @@ python newscrew/run_newscrew.py
 ### Story Schema (NewsCrew)
 
 - Story text is stored as a `sentences` array (instead of a single `body` string).
+- `section` was removed from `stories.json` for new episodes.
+- Why: hard section labels became too constrictive for the newer editorial direction and shot-planning flow.
+- Compatibility note: older episode artifacts may still include `section`, but it is no longer required as part of the canonical story schema.
 - Optional editorial controls can be added manually per story for pacing and inter-anchor interaction:
   - `pre_story`, `post_story`
   - `break_after`, `break_question`, `break_response_lead`
